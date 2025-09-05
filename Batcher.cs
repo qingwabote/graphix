@@ -1,6 +1,7 @@
 using Bastard;
 using Unity.Entities;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace Graphix
 {
@@ -17,7 +18,7 @@ namespace Graphix
         {
             using (new Profile.Scope(m_BatchEntry))
             {
-                foreach (var (mm, world) in SystemAPI.Query<MaterialMeshInfo, RefRO<LocalToWorld>>().WithOptions(EntityQueryOptions.FilterWriteGroup))
+                foreach (var (mm, world, _) in SystemAPI.Query<MaterialMeshInfo, RefRO<LocalToWorld>, RefRW<BatchOutput>>().WithOptions(EntityQueryOptions.FilterWriteGroup))
                 {
                     if (Batch.Register(HashCode.Combine(mm.Mesh, mm.Material), out Batch batch))
                     {

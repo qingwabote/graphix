@@ -14,8 +14,8 @@ namespace Graphix
         public Entity Value;
     }
 
-    [WriteGroup(typeof(MaterialMeshBaking))]
-    struct SkinnedMaterialMeshInfo : IComponentData { }
+    [WriteGroup(typeof(BatchOutput))]
+    struct SkinnedBatchOutput : IComponentData { }
 
     class SkinnedMeshRendererBaker : Baker<SkinnedMeshRendererAuthoring>
     {
@@ -28,8 +28,8 @@ namespace Graphix
                 Mesh = meshRenderer.sharedMesh,
                 Material = authoring.Material
             });
-            AddComponent<SkinnedMaterialMeshInfo>(entity);
             AddComponent(entity, new SkinRootEntity { Value = GetEntity(authoring.Skin, TransformUsageFlags.None) });
+            AddComponent<SkinnedBatchOutput>(entity);
         }
     }
 }
