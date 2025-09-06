@@ -38,7 +38,6 @@ namespace Graphix
                     Material = materialIndex,
                     Mesh = meshIndex
                 });
-                ecb.AddComponent<BatchOutput>(entity);
             }
 
             MaterialMeshArray materialMeshArray = new()

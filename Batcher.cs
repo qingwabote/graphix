@@ -18,12 +18,13 @@ namespace Graphix
         {
             using (new Profile.Scope(m_BatchEntry))
             {
-                foreach (var (mm, world, _) in SystemAPI.Query<MaterialMeshInfo, RefRO<LocalToWorld>, RefRW<BatchOutput>>().WithOptions(EntityQueryOptions.FilterWriteGroup))
+                // make MaterialMeshInfo RefRW for WriteGroup
+                foreach (var (mm, world) in SystemAPI.Query<RefRW<MaterialMeshInfo>, RefRO<LocalToWorld>>().WithOptions(EntityQueryOptions.FilterWriteGroup))
                 {
-                    if (Batch.Register(HashCode.Combine(mm.Mesh, mm.Material), out Batch batch))
+                    if (Batch.Register(HashCode.Combine(mm.ValueRO.Mesh, mm.ValueRO.Material), out Batch batch))
                     {
-                        batch.Material = mm.Material;
-                        batch.Mesh = mm.Mesh;
+                        batch.Material = mm.ValueRO.Material;
+                        batch.Mesh = mm.ValueRO.Mesh;
                     }
                     batch.InstanceWorlds.Add(world.ValueRO.Value);
                     batch.InstanceCount++;
