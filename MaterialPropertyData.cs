@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Graphix
 {
-    public class MaterialProperty
+    public class MaterialPropertyData
     {
         public Dictionary<int, Texture> Textures = new();
         public Dictionary<int, List<float>> Floats = new();

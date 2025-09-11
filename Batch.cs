@@ -62,7 +62,7 @@ namespace Graphix
 
         public int Mesh;
         public int Material;
-        public MaterialProperty MaterialProperty = new();
+        public MaterialPropertyData MaterialProperty = new();
 
         public NativeList<float4x4> InstanceWorlds = new(Allocator.Persistent);
         public int InstanceCount;
