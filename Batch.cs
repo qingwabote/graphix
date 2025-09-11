@@ -15,7 +15,7 @@ namespace Graphix
         private static int s_CountEntry = Profile.DefineEntry("Count");
         private static int s_DrawEntry = Profile.DefineEntry("Draw");
 
-        public static bool Register(int key, out Batch batch)
+        public static bool Get(int key, out Batch batch)
         {
             if (s_Cache.TryGetValue(key, out int index))
             {

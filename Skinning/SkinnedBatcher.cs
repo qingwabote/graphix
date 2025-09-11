@@ -29,7 +29,7 @@ namespace Graphix
                 foreach (var (mm, root) in SystemAPI.Query<MaterialMeshInfo, RefRO<SkinRootEntity>>())
                 {
                     var Skin = state.EntityManager.GetComponentObject<SkinInfo>(root.ValueRO.Value);
-                    if (Batch.Register(HashCode.Combine(mm.Mesh, mm.Material, Skin.Store.Texture.GetHashCode()), out Batch batch))
+                    if (Batch.Get(HashCode.Combine(mm.Mesh, mm.Material, Skin.Store.Texture.GetHashCode()), out Batch batch))
                     {
                         batch.Material = mm.Material;
                         batch.Mesh = mm.Mesh;
