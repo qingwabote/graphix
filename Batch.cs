@@ -45,6 +45,10 @@ namespace Graphix
                     {
                         s_MPB.SetFloatArray(id, list);
                     }
+                    foreach (var (id, list) in batch.MaterialProperty.Vectors)
+                    {
+                        s_MPB.SetVectorArray(id, list);
+                    }
 
                     var rp = new RenderParams(materials[batch.Material])
                     {

@@ -7,11 +7,13 @@ namespace Graphix
     {
         public Dictionary<int, Texture> Textures = new();
         public Dictionary<int, List<float>> Floats = new();
+        public Dictionary<int, List<Vector4>> Vectors = new();
 
         public void Clear()
         {
             Textures.Clear();
             Floats.Clear();
+            Vectors.Clear();
         }
     }
 }
