@@ -33,15 +33,12 @@ namespace Graphix
                     {
                         batch.Material = mm.Material;
                         batch.Mesh = mm.Mesh;
-                        batch.MaterialProperty.Textures.Add(s_JOINTS, Skin.Store.Texture);
-                        var floats = s_Floats.Get();
-                        floats.Clear();
-                        batch.MaterialProperty.Floats.Add(s_OFFSET, floats);
+                        batch.PropertyTextureBind(s_JOINTS, Skin.Store.Texture);
+                        batch.PropertyFloatAcquire(s_OFFSET);
                     }
-                    batch.InstanceWorlds.Add(state.EntityManager.GetComponentData<LocalToWorld>(root.ValueRO.Value).Value);
-                    batch.MaterialProperty.Floats.TryGetValue(s_OFFSET, out var offsets);
-                    offsets.Add(Skin.Offset);
-                    batch.InstanceCount++;
+                    batch.Worlds.Add(state.EntityManager.GetComponentData<LocalToWorld>(root.ValueRO.Value).Value);
+                    batch.PropertyFloatAdd(s_OFFSET, Skin.Offset);
+                    batch.Count++;
                 }
             }
         }

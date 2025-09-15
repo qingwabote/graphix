@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Bastard;
 using Budget;
 using Unity.Collections;
@@ -14,14 +11,10 @@ namespace Graphix
 {
     public partial struct Batcher : ISystem
     {
-        static private TransientPool<List<Vector4>> s_VectorPool;
-
         private int m_BatchEntry;
 
         public void OnCreate(ref SystemState state)
         {
-            s_VectorPool = new();
-
             MaterialProperty.Initialize(ref state);
 
             m_BatchEntry = Profile.DefineEntry("Batch");
@@ -63,21 +56,18 @@ namespace Graphix
                             for (int i = 0; i < properties.Length; i++)
                             {
                                 var property = properties.Ptr[i];
-                                var vectors = s_VectorPool.Get();
-                                vectors.Clear();
-                                batch.MaterialProperty.Vectors.Add(property.Name, vectors);
+                                batch.PropertyVectorAcquire(property.Name);
                             }
                         }
                         for (int i = 0; i < properties.Length; i++)
                         {
                             var property = properties.Ptr[i];
-                            batch.MaterialProperty.Vectors.TryGetValue(property.Name, out var vectors);
-                            float4* data = (float4*)propertyData[i];
-                            vectors.Add(data[entity]);
+                            var data = (float4*)propertyData[i];
+                            batch.PropertyVectorAdd(property.Name, data[entity]);
                         }
 
-                        batch.InstanceWorlds.Add(worlds.ElementAtRO(entity).Value);
-                        batch.InstanceCount++;
+                        batch.Worlds.Add(worlds.ElementAtRO(entity).Value);
+                        batch.Count++;
                     }
                 }
             }
