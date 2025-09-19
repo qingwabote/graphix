@@ -64,7 +64,7 @@ namespace Graphix.GLTF
                 for (int i = 0; i < _context.Root.Animations.Count; i++)
                 {
                     var animationClip = ImporterAnimation.CreateAnimationClip(_context.SceneImporter, i, sceneObject);
-                    _context.AssetContext.AddObjectToAsset($"Budget_{animationClip.name}", animationClip);
+                    _context.AssetContext.AddObjectToAsset($"Graphix_{animationClip.name}", animationClip);
                 }
 
             }
@@ -122,13 +122,13 @@ namespace Graphix.GLTF
                         material.SetFloat("_SKINNING", 1);
                         materials.Add(renderer.sharedMaterial, material);
 
-                        _context.AssetContext.AddObjectToAsset($"Budget_{material.name}", material);
+                        _context.AssetContext.AddObjectToAsset($"Graphix_{material.name}", material);
                     }
                     var authoring = renderer.gameObject.AddComponent<SkinnedMeshRendererAuthoring>();
                     authoring.Material = material;
                 }
 
-                _context.AssetContext.AddObjectToAsset($"Budget_{skin.name}", skin);
+                _context.AssetContext.AddObjectToAsset($"Graphix_{skin.name}", skin);
             }
         }
     }
