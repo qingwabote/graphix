@@ -127,6 +127,20 @@ namespace Graphix
                 Proto = authoring.Proto,
                 Baking = authoring.Baking
             });
+
+            var materails = new List<Material>();
+            var meshes = new List<Mesh>();
+            var renderers = GetComponentsInChildren<SkinnedMeshRenderer>();
+            foreach (var renderer in renderers)
+            {
+                materails.Add(renderer.GetComponent<SkinnedMeshRendererAuthoring>().Material);
+                meshes.Add(renderer.sharedMesh);
+            }
+            AddComponentObject(entity, new MaterialMeshArrayBaking
+            {
+                Materials = materails.ToArray(),
+                Meshes = meshes.ToArray()
+            });
         }
     }
 }

@@ -6,7 +6,7 @@ namespace Graphix
 {
     public partial struct Renderer : ISystem
     {
-        private static List<MaterialMeshArray> s_MaterialMeshArrays = new(2);
+        private static readonly List<MaterialMeshArray> s_MaterialMeshArrays = new(2);
 
         public void OnCreate(ref SystemState state)
         {

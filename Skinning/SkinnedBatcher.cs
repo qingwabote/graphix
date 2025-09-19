@@ -11,14 +11,10 @@ namespace Graphix
         private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
         private static readonly int s_OFFSET = Shader.PropertyToID("_JointOffset");
 
-        private static TransientPool<List<float>> s_Floats;
-
         private int m_BatchEntry;
 
         public void OnCreate(ref SystemState state)
         {
-            s_Floats = new();
-
             m_BatchEntry = Profile.DefineEntry("SkinnedBatch");
         }
 
@@ -26,19 +22,23 @@ namespace Graphix
         {
             using (new Profile.Scope(m_BatchEntry))
             {
-                foreach (var (mm, root) in SystemAPI.Query<MaterialMeshInfo, RefRO<SkinRootEntity>>())
+                foreach (var (mmb, skin, world) in SystemAPI.Query<DynamicBuffer<MaterialMeshElement>, SkinInfo, RefRO<LocalToWorld>>())
                 {
-                    var Skin = state.EntityManager.GetComponentObject<SkinInfo>(root.ValueRO.Value);
-                    if (Batch.Get(HashCode.Combine(mm.Mesh, mm.Material, Skin.Store.Texture.GetHashCode()), out Batch batch))
+                    for (int i = 0; i < mmb.Length; i++)
                     {
-                        batch.Material = mm.Material;
-                        batch.Mesh = mm.Mesh;
-                        batch.PropertyTextureBind(s_JOINTS, Skin.Store.Texture);
-                        batch.PropertyFloatAcquire(s_OFFSET);
+                        var mm = mmb[i];
+                        if (Batch.Get(HashCode.Combine(mm.Mesh, mm.Material, skin.Store.Texture.GetHashCode()), out Batch batch))
+                        {
+                            batch.Material = mm.Material;
+                            batch.Mesh = mm.Mesh;
+                            batch.PropertyTextureBind(s_JOINTS, skin.Store.Texture);
+                            batch.PropertyFloatAcquire(s_OFFSET);
+                        }
+                        batch.Worlds.Add(world.ValueRO.Value);
+                        batch.PropertyFloatAdd(s_OFFSET, skin.Offset);
+                        batch.Count++;
                     }
-                    batch.Worlds.Add(state.EntityManager.GetComponentData<LocalToWorld>(root.ValueRO.Value).Value);
-                    batch.PropertyFloatAdd(s_OFFSET, Skin.Offset);
-                    batch.Count++;
+
                 }
             }
         }

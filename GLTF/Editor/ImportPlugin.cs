@@ -126,7 +126,6 @@ namespace Graphix.GLTF
                     }
                     var authoring = renderer.gameObject.AddComponent<SkinnedMeshRendererAuthoring>();
                     authoring.Material = material;
-                    authoring.Skin = skinAuthoring;
                 }
 
                 _context.AssetContext.AddObjectToAsset($"Budget_{skin.name}", skin);

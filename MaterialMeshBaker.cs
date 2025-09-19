@@ -33,11 +33,41 @@ namespace Graphix
                     mesh2index.Add(mm.Mesh, meshIndex);
                 }
 
-                ecb.AddComponent(entity, new MaterialMeshInfo
+                ecb.AddComponent(entity, new MaterialMesh
                 {
                     Material = materialIndex,
                     Mesh = meshIndex
                 });
+            }
+            foreach (var (mma, entity) in SystemAPI.Query<MaterialMeshArrayBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab))
+            {
+                var mmb = ecb.AddBuffer<MaterialMeshElement>(entity);
+                var count = mma.Materials.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    var material = mma.Materials[i];
+                    var mesh = mma.Meshes[i];
+
+                    if (!material2index.TryGetValue(material, out var materialIndex))
+                    {
+                        materialIndex = materials.Count;
+                        materials.Add(material);
+                        material2index.Add(material, materialIndex);
+                    }
+
+                    if (!mesh2index.TryGetValue(mesh, out var meshIndex))
+                    {
+                        meshIndex = meshes.Count;
+                        meshes.Add(mesh);
+                        mesh2index.Add(mesh, meshIndex);
+                    }
+
+                    mmb.Add(new MaterialMeshElement
+                    {
+                        Material = materialIndex,
+                        Mesh = meshIndex
+                    });
+                }
             }
 
             MaterialMeshArray materialMeshArray = new()
@@ -46,10 +76,12 @@ namespace Graphix
                 Meshes = meshes.ToArray(),
                 HashCode = 666
             };
-            foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab))
-            {
-                ecb.AddSharedComponentManaged(entity, materialMeshArray);
-            }
+
+            ecb.AddSharedComponentManaged(
+                SystemAPI.QueryBuilder().WithAny<MaterialMeshBaking, MaterialMeshArrayBaking>().WithOptions(EntityQueryOptions.IncludePrefab).Build(),
+                materialMeshArray,
+                EntityQueryCaptureMode.AtPlayback
+            );
 
             ecb.Playback(state.EntityManager);
             ecb.Dispose();
