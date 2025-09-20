@@ -7,7 +7,6 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
 
 namespace Graphix
 {
@@ -26,7 +25,7 @@ namespace Graphix
 
             public override int GetHashCode()
             {
-                return HashCode.Combine(m_Clip.GetHashCode(), m_Frame);
+                return Bastard.HashCode.Combine(m_Clip.GetHashCode(), m_Frame);
             }
 
             public bool Equals(ClipFrame other)
