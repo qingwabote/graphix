@@ -23,15 +23,14 @@ namespace Graphix
         {
             using (new Profile.Scope(m_BatchEntry))
             {
-                var MaterialMeshInfo = SystemAPI.GetComponentTypeHandle<MaterialMesh>();
-                MaterialMeshInfo.Update(ref state);
+                var MaterialMesh = SystemAPI.GetComponentTypeHandle<MaterialMesh>(true);
+                MaterialMesh.Update(ref state);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
                 LocalToWorld.Update(ref state);
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
-                // make MaterialMeshInfo RefRW for WriteGroup
-                foreach (var chunk in SystemAPI.QueryBuilder().WithAllRW<MaterialMesh>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMesh>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     var properties = MaterialProperty.Get(chunk.Archetype);
                     var propertyData = stackalloc void*[properties.Length];
@@ -43,7 +42,7 @@ namespace Graphix
                         propertyData[i] = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref handle, property.Size).GetUnsafeReadOnlyPtr();
                     }
 
-                    var mms = chunk.GetNativeArray(ref MaterialMeshInfo);
+                    var mms = chunk.GetNativeArray(ref MaterialMesh);
                     var worlds = chunk.GetNativeArray(ref LocalToWorld);
                     for (int entity = 0; entity < chunk.Count; entity++)
                     {

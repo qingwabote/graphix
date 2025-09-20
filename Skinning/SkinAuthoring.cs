@@ -39,8 +39,6 @@ namespace Graphix
         public int Index;
 
         public Transient<SkinJointDataView> DataView;
-
-        public int DataOffset;
     }
 
     class SkinBaker : Baker<SkinAuthoring>
