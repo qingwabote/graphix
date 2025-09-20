@@ -37,6 +37,11 @@ namespace Graphix
         private static readonly Dictionary<Skin, int> s_SkinOffsets = new();
         private static readonly NativeHashMap<ClipFrame, int> s_ClipFrameOffsets = new(1024, Allocator.Persistent);
 
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<SkinArray>();
+        }
+
         public void OnUpdate(ref SystemState state)
         {
             // foreach (var (infoComponent, joint) in SystemAPI.Query<SkinInfoComponent, RefRW<SkinJoint>>().WithNone<AnimationState>())
@@ -57,50 +62,53 @@ namespace Graphix
             //     }
             // }
 
-            foreach (var (info, joint, anim, clips, entity) in SystemAPI.Query<SkinInfo, RefRW<SkinJoint>, RefRO<AnimationState>, DynamicBuffer<ClipBinging>>().WithEntityAccess())
+            var skinArray = SkinArray.GetInstance(ref state);
+            foreach (var (info, joint, offset, anim, clips, entity) in SystemAPI.Query<SkinInfo, RefRW<SkinJoint>, RefRW<SkinOffset>, RefRO<AnimationState>, DynamicBuffer<ClipBinging>>().WithEntityAccess())
             {
-                int offset;
+                int ofst;
                 if (info.Baking)
                 {
                     var clip = clips.ElementAt(anim.ValueRO.ClipIndex);
                     var ratio = anim.ValueRO.Time / clip.Duration;
                     var frame = (int)math.ceil(ratio * (clip.Duration * 60 - 1));
                     var key = new ClipFrame(clip.Blob, frame);
-                    if (s_ClipFrameOffsets.TryGetValue(key, out offset))
+                    if (s_ClipFrameOffsets.TryGetValue(key, out ofst))
                     {
                         SystemAPI.SetBufferEnabled<ChannelTarget>(entity, false);
                     }
                     else
                     {
-                        offset = info.Store.Add();
+                        var store = skinArray.GetStore(info);
+                        ofst = store.Add();
                         unsafe
                         {
                             joint.ValueRW.DataView.Value = new()
                             {
-                                Data = (long)info.Store.Source,
-                                Offset = offset
+                                Data = (long)store.Source,
+                                Offset = ofst
                             };
                         }
-                        s_ClipFrameOffsets.Add(key, offset);
+                        s_ClipFrameOffsets.Add(key, ofst);
 
                         SystemAPI.SetBufferEnabled<ChannelTarget>(entity, true);
                     }
                 }
                 else
                 {
-                    offset = info.Store.Add();
+                    var store = skinArray.GetStore(info);
+                    ofst = store.Add();
                     unsafe
                     {
                         joint.ValueRW.DataView.Value = new()
                         {
-                            Data = (long)info.Store.Source,
-                            Offset = offset
+                            Data = (long)store.Source,
+                            Offset = ofst
                         };
                     }
 
                     SystemAPI.SetBufferEnabled<ChannelTarget>(entity, true);
                 }
-                info.Offset = offset;
+                offset.ValueRW.Value = ofst;
             }
         }
     }
@@ -167,6 +175,8 @@ namespace Graphix
 
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<SkinArray>();
+
             m_ProfileEntry = Profile.DefineEntry("SkinUpload");
         }
 
@@ -174,9 +184,10 @@ namespace Graphix
         {
             using (new Profile.Scope(m_ProfileEntry))
             {
-                foreach (var skin in SystemAPI.Query<SkinInfo>())
+                var skinArray = SkinArray.GetInstance(ref state);
+                foreach (var info in SystemAPI.Query<SkinInfo>())
                 {
-                    skin.Store.Update();
+                    skinArray.GetStore(info).Update();
                 }
             }
         }

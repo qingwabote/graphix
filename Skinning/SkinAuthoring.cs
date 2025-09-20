@@ -13,14 +13,6 @@ namespace Graphix
         public bool Baking;
     }
 
-    public class SkinInfo : IComponentData
-    {
-        public Skin Proto;
-        public bool Baking;
-        public int Offset;
-        public Skin.Store Store => Baking ? Proto.Persistent : Proto.Transient;
-    }
-
     public struct SkinNode : IBufferElementData
     {
         public Entity Target;
@@ -121,7 +113,8 @@ namespace Graphix
                 Index = JointStart,
                 InverseBindMatrices = authoring.Proto.InverseBindMatrices
             });
-            AddComponentObject(entity, new SkinInfo
+            AddComponent<SkinOffset>(entity);
+            AddComponentObject(entity, new SkinInfoBaking
             {
                 Proto = authoring.Proto,
                 Baking = authoring.Baking
