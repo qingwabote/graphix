@@ -2,9 +2,10 @@ using Unity.Entities;
 
 namespace Graphix
 {
+    [MaterialProperty("_JointOffset")]
     public struct SkinOffset : IComponentData
     {
-        public int Value;
+        public float Value;
     }
 
     public struct SkinInfo : IComponentData

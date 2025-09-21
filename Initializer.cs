@@ -1,4 +1,3 @@
-using Unity.Collections;
 using Unity.Entities;
 
 namespace Graphix
@@ -7,6 +6,7 @@ namespace Graphix
     {
         public void OnCreate(ref SystemState state)
         {
+            MaterialProperty.Initialize(ref state);
         }
 
         public void OnUpdate(ref SystemState state)

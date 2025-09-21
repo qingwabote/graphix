@@ -1,14 +1,14 @@
 using Bastard;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Transforms;
-using UnityEngine;
 
 namespace Graphix
 {
     public partial struct SkinnedBatcher : ISystem
     {
-        private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
-        private static readonly int s_OFFSET = Shader.PropertyToID("_JointOffset");
+        private static BatcherImpl<SkinnedBatchKey, SkinnedBatchSorter> s_Batcher = new();
 
         private int m_BatchEntry;
 
@@ -19,30 +19,39 @@ namespace Graphix
             m_BatchEntry = Profile.DefineEntry("SkinnedBatch");
         }
 
-        public void OnUpdate(ref SystemState state)
+        unsafe public void OnUpdate(ref SystemState state)
         {
             using (new Profile.Scope(m_BatchEntry))
             {
-                var skinArray = SkinArray.GetInstance(ref state);
-                foreach (var (mmb, info, offset, world) in SystemAPI.Query<DynamicBuffer<MaterialMeshElement>, SkinInfo, SkinOffset, RefRO<LocalToWorld>>())
-                {
-                    for (int i = 0; i < mmb.Length; i++)
-                    {
-                        var mm = mmb[i];
-                        var store = skinArray.GetStore(info);
-                        if (Batch.Get(HashCode.Combine(mm.Mesh, mm.Material, store.Texture.GetHashCode()), out Batch batch))
-                        {
-                            batch.Material = mm.Material;
-                            batch.Mesh = mm.Mesh;
-                            batch.PropertyTextureBind(s_JOINTS, store.Texture);
-                            batch.PropertyFloatAcquire(s_OFFSET);
-                        }
-                        batch.Worlds.Add(world.ValueRO.Value);
-                        batch.PropertyFloatAdd(s_OFFSET, offset.Value);
-                        batch.Count++;
-                    }
+                var MaterialMeshElement = SystemAPI.GetBufferTypeHandle<MaterialMeshElement>(true);
+                MaterialMeshElement.Update(ref state);
+                var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
+                LocalToWorld.Update(ref state);
+                var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
+                SkinInfo.Update(ref state);
 
+                s_Batcher.Sorter.SkinArray = SkinArray.GetInstance(ref state);
+
+                state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
+
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshElement>().Build().ToArchetypeChunkArray(Allocator.Temp))
+                {
+                    s_Batcher.BeginChunk(ref state, chunk);
+                    var mma = chunk.GetBufferAccessor(ref MaterialMeshElement);
+                    var worlds = chunk.GetNativeArray(ref LocalToWorld);
+                    s_Batcher.Sorter.SkinInfos = chunk.GetNativeArray(ref SkinInfo);
+                    for (int entity = 0; entity < chunk.Count; entity++)
+                    {
+                        var mmb = mma[entity];
+                        var mmp = (MaterialMesh*)mmb.GetUnsafeReadOnlyPtr();
+                        for (int i = 0; i < mmb.Length; i++)
+                        {
+                            s_Batcher.Add(mmp[i], worlds.ElementAtRO(entity), entity);
+                        }
+                    }
+                    s_Batcher.EndChunk();
                 }
+                s_Batcher.Clear();
             }
         }
     }
