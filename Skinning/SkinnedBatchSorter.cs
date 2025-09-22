@@ -8,16 +8,16 @@ namespace Graphix
     {
         public int Material;
         public int Mesh;
-        public int Store;
+        public int Skin;
 
         public override int GetHashCode()
         {
-            return Bastard.HashCode.Combine(Material, Mesh, Store);
+            return Bastard.HashCode.Combine(Material, Mesh, Skin);
         }
 
         public bool Equals(SkinnedBatchKey other)
         {
-            return Material == other.Material && Mesh == other.Mesh && Store == other.Store;
+            return Material == other.Material && Mesh == other.Mesh && Skin == other.Skin;
         }
     }
 
@@ -34,7 +34,7 @@ namespace Graphix
             {
                 Material = mm.Material,
                 Mesh = mm.Mesh,
-                Store = SkinInfos[entity].Proto
+                Skin = SkinInfos[entity].Proto
             };
         }
 
