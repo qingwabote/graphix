@@ -8,15 +8,24 @@ namespace Unity.Rendering
     [UpdateInGroup(typeof(LateSimulationSystemGroup))]
     public partial class EntitiesGraphicsSystem : SystemBase
     {
+        private static readonly Registry<Material> s_Materials;
+
         public static readonly RecycleQueue<Batch> Queue = new();
+
         private static readonly MaterialPropertyBlock s_MPB = new();
 
         private static readonly int s_CountEntry = Profile.DefineEntry("Count");
         private static readonly int s_DrawEntry = Profile.DefineEntry("Draw");
 
+        static EntitiesGraphicsSystem()
+        {
+            s_Materials = new();
+            s_Materials.Register(null);
+        }
+
         public int RegisterMaterial(Material material)
         {
-            return 0;
+            return s_Materials.Register(material);
         }
 
         public int RegisterMesh(Mesh mesh)
@@ -44,11 +53,11 @@ namespace Unity.Rendering
                     s_MPB.Clear();
                     batch.PropertyDrain(s_MPB);
 
-                    var rp = new RenderParams(materialMeshArray.Materials[batch.Material])
+                    var rp = new RenderParams(batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material))
                     {
                         matProps = s_MPB
                     };
-                    Graphics.RenderMeshInstanced(rp, materialMeshArray.Meshes[batch.Mesh], 0, batch.Worlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
+                    Graphics.RenderMeshInstanced(rp, materialMeshArray.Meshes[-batch.Mesh], 0, batch.Worlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
 
                     batch.Worlds.Clear();
                     batch.Count = 0;

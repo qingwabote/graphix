@@ -5,6 +5,7 @@ namespace Graphix
 {
     public struct MaterialMesh : IComponentData, IEquatable<MaterialMesh>
     {
+        /* negative for static and positive for dynamic */
         public int Material;
         public int Mesh;
 

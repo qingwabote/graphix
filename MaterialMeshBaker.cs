@@ -13,8 +13,8 @@ namespace Graphix
             Dictionary<Material, int> material2index = new();
             Dictionary<Mesh, int> mesh2index = new();
 
-            List<Material> materials = new();
-            List<Mesh> meshes = new();
+            List<Material> materials = new() { null };
+            List<Mesh> meshes = new() { null };
 
             EntityCommandBuffer ecb = new(Allocator.TempJob);
             foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab))
@@ -35,8 +35,8 @@ namespace Graphix
 
                 ecb.AddComponent(entity, new MaterialMesh
                 {
-                    Material = materialIndex,
-                    Mesh = meshIndex
+                    Material = -materialIndex,
+                    Mesh = -meshIndex
                 });
             }
             foreach (var (mma, entity) in SystemAPI.Query<MaterialMeshArrayBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab))
@@ -64,8 +64,8 @@ namespace Graphix
 
                     mmb.Add(new MaterialMeshElement
                     {
-                        Material = materialIndex,
-                        Mesh = meshIndex
+                        Material = -materialIndex,
+                        Mesh = -meshIndex
                     });
                 }
             }
