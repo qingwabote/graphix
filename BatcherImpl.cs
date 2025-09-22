@@ -11,18 +11,18 @@ namespace Graphix
 {
     public unsafe interface IBatchSorter<T>
     {
-        T Key(MaterialMesh mm, int entity);
-        void Init(Batch batch, MaterialMesh mm, int entity);
+        T Key(MaterialMeshInfo mm, int entity);
+        void Init(Batch batch, MaterialMeshInfo mm, int entity);
     }
 
-    public unsafe struct BatchSorter : IBatchSorter<MaterialMesh>
+    public unsafe struct BatchSorter : IBatchSorter<MaterialMeshInfo>
     {
-        public MaterialMesh Key(MaterialMesh mm, int entity)
+        public MaterialMeshInfo Key(MaterialMeshInfo mm, int entity)
         {
             return mm;
         }
 
-        public void Init(Batch batch, MaterialMesh mm, int entity)
+        public void Init(Batch batch, MaterialMeshInfo mm, int entity)
         {
             batch.Material = mm.Material;
             batch.Mesh = mm.Mesh;
@@ -51,7 +51,7 @@ namespace Graphix
             }
         }
 
-        public void Add(MaterialMesh mm, in LocalToWorld world, int entity)
+        public void Add(MaterialMeshInfo mm, in LocalToWorld world, int entity)
         {
             Batch batch;
             TKey key = Sorter.Key(mm, entity);

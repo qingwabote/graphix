@@ -2,6 +2,7 @@ using Bastard;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
+using Unity.Rendering;
 
 namespace Graphix
 {
@@ -42,7 +43,7 @@ namespace Graphix
                     for (int entity = 0; entity < chunk.Count; entity++)
                     {
                         var mmb = mma[entity];
-                        var mmp = (MaterialMesh*)mmb.GetUnsafeReadOnlyPtr();
+                        var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                         for (int i = 0; i < mmb.Length; i++)
                         {
                             s_Batcher.Add(mmp[i], worlds.ElementAtRO(entity), entity);

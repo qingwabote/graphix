@@ -1,5 +1,6 @@
 using System;
 using Unity.Collections;
+using Unity.Rendering;
 using UnityEngine;
 
 namespace Graphix
@@ -28,7 +29,7 @@ namespace Graphix
         public SkinArray SkinArray;
         public NativeArray<SkinInfo> SkinInfos;
 
-        public SkinnedBatchKey Key(MaterialMesh mm, int entity)
+        public SkinnedBatchKey Key(MaterialMeshInfo mm, int entity)
         {
             return new SkinnedBatchKey
             {
@@ -38,7 +39,7 @@ namespace Graphix
             };
         }
 
-        public void Init(Batch batch, MaterialMesh mm, int entity)
+        public void Init(Batch batch, MaterialMeshInfo mm, int entity)
         {
             batch.Material = mm.Material;
             batch.Mesh = mm.Mesh;

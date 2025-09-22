@@ -1,9 +1,9 @@
 using System;
 using Unity.Entities;
 
-namespace Graphix
+namespace Unity.Rendering
 {
-    public struct MaterialMesh : IComponentData, IEquatable<MaterialMesh>
+    public struct MaterialMeshInfo : IComponentData, IEquatable<MaterialMeshInfo>
     {
         /* negative for static and positive for dynamic */
         public int Material;
@@ -20,7 +20,7 @@ namespace Graphix
             return Bastard.HashCode.Combine(Material, Mesh);
         }
 
-        public bool Equals(MaterialMesh other)
+        public bool Equals(MaterialMeshInfo other)
         {
             return Material == other.Material && Mesh == other.Mesh;
         }

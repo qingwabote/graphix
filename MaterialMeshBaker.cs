@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Rendering;
 using UnityEngine;
 
 namespace Graphix
@@ -33,7 +34,7 @@ namespace Graphix
                     mesh2index.Add(mm.Mesh, meshIndex);
                 }
 
-                ecb.AddComponent(entity, new MaterialMesh
+                ecb.AddComponent(entity, new MaterialMeshInfo
                 {
                     Material = -materialIndex,
                     Mesh = -meshIndex
