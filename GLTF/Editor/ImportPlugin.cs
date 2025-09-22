@@ -21,18 +21,6 @@ namespace Graphix.GLTF
             _context.SceneImporter.CustomShaderName = "Graphix/Phong";
         }
 
-        public override void OnAfterImportNode(Node node, int nodeIndex, GameObject nodeObject)
-        {
-            var renderer = nodeObject.GetComponent<UnityEngine.Renderer>();
-            if (renderer)
-            {
-                if (renderer is UnityEngine.MeshRenderer)
-                {
-                    nodeObject.AddComponent<MeshRendererAuthoring>();
-                }
-            }
-        }
-
         public override void OnAfterImportMaterial(GLTFMaterial material, int materialIndex, Material materialObject)
         {
             var pbr = material.PbrMetallicRoughness;
