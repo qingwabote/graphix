@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Rendering;
 using Unity.Transforms;
 
 namespace Graphix
@@ -56,12 +57,12 @@ namespace Graphix
             TKey key = Sorter.Key(mm, entity);
             if (m_Cache.TryGetValue(key, out int index))
             {
-                batch = Renderer.Queue.Data[index];
+                batch = EntitiesGraphicsSystem.Queue.Data[index];
             }
             else
             {
-                m_Cache.Add(key, Renderer.Queue.Count);
-                batch = Renderer.Queue.Push();
+                m_Cache.Add(key, EntitiesGraphicsSystem.Queue.Count);
+                batch = EntitiesGraphicsSystem.Queue.Push();
                 Sorter.Init(batch, mm, entity);
 
                 for (int i = 0; i < Properties.Length; i++)

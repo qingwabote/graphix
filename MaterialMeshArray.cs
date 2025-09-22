@@ -9,7 +9,7 @@ namespace Graphix
     {
         static private MaterialMeshArray s_Instance;
 
-        static public MaterialMeshArray GetInstance(ref SystemState state)
+        static public MaterialMeshArray GetInstance(EntityManager entityManager)
         {
             if (s_Instance.HashCode != 0)
             {
@@ -17,7 +17,7 @@ namespace Graphix
             }
 
             List<MaterialMeshArray> list = new();
-            state.EntityManager.GetAllUniqueSharedComponentsManaged(list);
+            entityManager.GetAllUniqueSharedComponentsManaged(list);
             s_Instance = list[1]; // 0 is always default
             return s_Instance;
         }

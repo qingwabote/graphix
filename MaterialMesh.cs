@@ -1,5 +1,4 @@
 using System;
-using Bastard;
 using Unity.Entities;
 
 namespace Graphix
@@ -8,6 +7,12 @@ namespace Graphix
     {
         public int Material;
         public int Mesh;
+
+        public int MaterialID
+        {
+            get => Material;
+            set => Material = value;
+        }
 
         public override int GetHashCode()
         {

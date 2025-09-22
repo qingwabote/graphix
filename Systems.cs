@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Rendering;
 using Unity.Transforms;
 
 namespace Graphix
@@ -19,15 +20,9 @@ namespace Graphix
     public partial struct SkinnedAnimationUploader : ISystem { }
 
 
-    [UpdateInGroup(typeof(LateSimulationSystemGroup))]
-    public partial struct Initializer : ISystem { }
-
-    [UpdateInGroup(typeof(LateSimulationSystemGroup)), UpdateAfter(typeof(Initializer)), UpdateBefore(typeof(Renderer))]
+    [UpdateInGroup(typeof(LateSimulationSystemGroup)), UpdateBefore(typeof(EntitiesGraphicsSystem))]
     public partial struct Batcher : ISystem { }
 
-    [UpdateInGroup(typeof(LateSimulationSystemGroup)), UpdateAfter(typeof(Initializer)), UpdateBefore(typeof(Renderer))]
+    [UpdateInGroup(typeof(LateSimulationSystemGroup)), UpdateBefore(typeof(EntitiesGraphicsSystem))]
     public partial struct SkinnedBatcher : ISystem { }
-
-    [UpdateInGroup(typeof(LateSimulationSystemGroup))]
-    public partial struct Renderer : ISystem { }
 }

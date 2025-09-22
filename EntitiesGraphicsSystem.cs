@@ -1,10 +1,12 @@
 using Bastard;
+using Graphix;
 using Unity.Entities;
 using UnityEngine;
 
-namespace Graphix
+namespace Unity.Rendering
 {
-    public partial struct Renderer : ISystem
+    [UpdateInGroup(typeof(LateSimulationSystemGroup))]
+    public partial class EntitiesGraphicsSystem : SystemBase
     {
         public static readonly RecycleQueue<Batch> Queue = new();
         private static readonly MaterialPropertyBlock s_MPB = new();
@@ -12,14 +14,26 @@ namespace Graphix
         private static readonly int s_CountEntry = Profile.DefineEntry("Count");
         private static readonly int s_DrawEntry = Profile.DefineEntry("Draw");
 
-        public void OnCreate(ref SystemState state)
+        public int RegisterMaterial(Material material)
         {
-            state.RequireForUpdate<MaterialMeshArray>();
+            return 0;
         }
 
-        public void OnUpdate(ref SystemState state)
+        public int RegisterMesh(Mesh mesh)
         {
-            var materialMeshArray = MaterialMeshArray.GetInstance(ref state);
+            return 0;
+        }
+
+        protected override void OnCreate()
+        {
+            MaterialProperty.Initialize(EntityManager);
+
+            RequireForUpdate<MaterialMeshArray>();
+        }
+
+        protected override void OnUpdate()
+        {
+            var materialMeshArray = MaterialMeshArray.GetInstance(EntityManager);
 
             Profile.Set(s_CountEntry, Queue.Count);
 

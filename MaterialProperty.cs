@@ -44,7 +44,7 @@ namespace Graphix
             return output;
         }
 
-        static public void Initialize(ref SystemState state)
+        static public void Initialize(EntityManager entityManager)
         {
             s_TypeToProperty = new(8, Allocator.Persistent);
             List<DynamicComponentTypeHandle> handles = new();
@@ -60,7 +60,7 @@ namespace Graphix
                     {
                         var attribute = (MaterialPropertyAttribute)attributes[0];
                         var property = new MaterialProperty(handles.Count, Shader.PropertyToID(attribute.Name), (short)UnsafeUtility.SizeOf(type));
-                        handles.Add(state.EntityManager.GetDynamicComponentTypeHandle(ComponentType.ReadOnly(typeInfo.TypeIndex)));
+                        handles.Add(entityManager.GetDynamicComponentTypeHandle(ComponentType.ReadOnly(typeInfo.TypeIndex)));
                         s_TypeToProperty.Add(typeInfo.TypeIndex, property);
                     }
                 }
