@@ -1,6 +1,6 @@
 using System;
 
-namespace Graphix
+namespace Unity.Rendering
 {
     /// <summary>
     /// Marks an IComponentData as an input to a material property on a particular shader.

@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Rendering;
 
 namespace Graphix
 {
