@@ -14,7 +14,8 @@ namespace Unity.Rendering
 
         private static readonly MaterialPropertyBlock s_MPB = new();
 
-        private static readonly int s_CountEntry = Profile.DefineEntry("Count");
+        private static readonly int s_Batches = Profile.DefineEntry("Batches");
+        private static readonly int s_Entities = Profile.DefineEntry("Entities");
         private static readonly int s_DrawEntry = Profile.DefineEntry("Draw");
 
         static EntitiesGraphicsSystem()
@@ -42,12 +43,13 @@ namespace Unity.Rendering
 
         protected override void OnUpdate()
         {
-            var materialMeshArray = MaterialMeshArray.GetInstance(EntityManager);
-
-            Profile.Delta(s_CountEntry, Queue.Count);
-
             using (new Profile.Scope(s_DrawEntry))
             {
+                var materialMeshArray = MaterialMeshArray.GetInstance(EntityManager);
+
+                Profile.Delta(s_Batches, Queue.Count);
+
+                int entities = 0;
                 foreach (var batch in Queue.Drain())
                 {
                     s_MPB.Clear();
@@ -58,10 +60,12 @@ namespace Unity.Rendering
                         matProps = s_MPB
                     };
                     Graphics.RenderMeshInstanced(rp, materialMeshArray.Meshes[-batch.Mesh], 0, batch.Worlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
+                    entities += batch.Count;
 
                     batch.Worlds.Clear();
                     batch.Count = 0;
                 }
+                Profile.Delta(s_Entities, entities);
             }
         }
     }
