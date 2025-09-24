@@ -44,7 +44,7 @@ namespace Unity.Rendering
         {
             var materialMeshArray = MaterialMeshArray.GetInstance(EntityManager);
 
-            Profile.Set(s_CountEntry, Queue.Count);
+            Profile.Delta(s_CountEntry, Queue.Count);
 
             using (new Profile.Scope(s_DrawEntry))
             {
