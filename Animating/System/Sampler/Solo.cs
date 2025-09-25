@@ -16,12 +16,17 @@ namespace Graphix
 
         public void OnCreate(ref SystemState state)
         {
-            m_ProfileEntry = Profile.DefineEntry("Solo");
+            state.RequireForUpdate<AnimationState>();
         }
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+            if (m_ProfileEntry == 0)
+            {
+                m_ProfileEntry = Profile.DefineEntry("Solo");
+            }
+
             using (new Profile.Scope(m_ProfileEntry))
             {
                 foreach (var (animation, clipBingings, channelTargets, entity) in SystemAPI.Query<RefRO<AnimationState>, DynamicBuffer<ClipBinging>, DynamicBuffer<ChannelTarget>>().WithEntityAccess())

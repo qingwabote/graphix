@@ -14,13 +14,17 @@ namespace Graphix
 
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<SkinInfo>();
             state.RequireForUpdate<SkinArray>();
-
-            m_BatchEntry = Profile.DefineEntry("SkinnedBatch");
         }
 
         unsafe public void OnUpdate(ref SystemState state)
         {
+            if (m_BatchEntry == 0)
+            {
+                m_BatchEntry = Profile.DefineEntry("SkinnedBatch");
+            }
+
             using (new Profile.Scope(m_BatchEntry))
             {
                 var MaterialMeshElement = SystemAPI.GetBufferTypeHandle<MaterialMeshElement>(true);

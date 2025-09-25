@@ -7,7 +7,6 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
 
 namespace Graphix
 {
@@ -40,6 +39,7 @@ namespace Graphix
 
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<SkinInfo>();
             state.RequireForUpdate<SkinArray>();
         }
 
@@ -120,12 +120,17 @@ namespace Graphix
 
         public void OnCreate(ref SystemState state)
         {
-            m_ProfileEntry = Profile.DefineEntry("SkinUpdate");
+            state.RequireForUpdate<SkinJoint>();
         }
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+            if (m_ProfileEntry == 0)
+            {
+                m_ProfileEntry = Profile.DefineEntry("SkinUpdate");
+            }
+
             using (new Profile.Scope(m_ProfileEntry))
             {
                 foreach (var (nodes, joint) in SystemAPI.Query<DynamicBuffer<SkinNode>, RefRO<SkinJoint>>())
@@ -176,13 +181,18 @@ namespace Graphix
 
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<SkinInfo>();
             state.RequireForUpdate<SkinArray>();
 
-            m_ProfileEntry = Profile.DefineEntry("SkinUpload");
         }
 
         public void OnUpdate(ref SystemState state)
         {
+            if (m_ProfileEntry == 0)
+            {
+                m_ProfileEntry = Profile.DefineEntry("SkinUpload");
+            }
+
             using (new Profile.Scope(m_ProfileEntry))
             {
                 var skinArray = SkinArray.GetInstance(ref state);

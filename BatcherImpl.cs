@@ -74,19 +74,19 @@ namespace Graphix
 
         public TSorter Sorter = default;
 
-        UnsafeList<MaterialProperty>.ReadOnly Properties;
-        void** PropertyData = null;
+        private UnsafeList<MaterialProperty>.ReadOnly m_Properties;
+        private void** m_PropertyData = null;
 
         public void BeginChunk(ref SystemState state, ArchetypeChunk chunk)
         {
-            Properties = MaterialProperty.Get(chunk.Archetype);
-            PropertyData = (void**)UnsafeUtility.Malloc(sizeof(void*) * Properties.Length, UnsafeUtility.AlignOf<IntPtr>(), Allocator.Temp);
-            for (int i = 0; i < Properties.Length; i++)
+            m_Properties = MaterialProperty.Get(chunk.Archetype);
+            m_PropertyData = (void**)UnsafeUtility.Malloc(sizeof(void*) * m_Properties.Length, UnsafeUtility.AlignOf<IntPtr>(), Allocator.Temp);
+            for (int i = 0; i < m_Properties.Length; i++)
             {
-                var property = Properties.Ptr[i];
+                var property = m_Properties.Ptr[i];
                 ref var handle = ref MaterialProperty.Handles[property.Type];
                 handle.Update(ref state);
-                PropertyData[i] = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref handle, property.Size).GetUnsafeReadOnlyPtr();
+                m_PropertyData[i] = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref handle, property.Size).GetUnsafeReadOnlyPtr();
             }
         }
 
@@ -96,7 +96,7 @@ namespace Graphix
             KeyWithProperty key = new()
             {
                 Key = Sorter.Key(mm, entity),
-                Properties = Properties
+                Properties = m_Properties
             };
             if (m_Cache.TryGetValue(key, out int index))
             {
@@ -108,9 +108,9 @@ namespace Graphix
                 batch = EntitiesGraphicsSystem.Queue.Push();
                 Sorter.Init(batch, mm, entity);
 
-                for (int i = 0; i < Properties.Length; i++)
+                for (int i = 0; i < m_Properties.Length; i++)
                 {
-                    var property = Properties.Ptr[i];
+                    var property = m_Properties.Ptr[i];
                     if (property.Size == sizeof(float))
                     {
                         batch.PropertyFloatAcquire(property.Name);
@@ -122,17 +122,17 @@ namespace Graphix
                 }
             }
 
-            for (int i = 0; i < Properties.Length; i++)
+            for (int i = 0; i < m_Properties.Length; i++)
             {
-                var property = Properties.Ptr[i];
+                var property = m_Properties.Ptr[i];
                 if (property.Size == sizeof(float))
                 {
-                    var data = (float*)PropertyData[i];
+                    var data = (float*)m_PropertyData[i];
                     batch.PropertyFloatAdd(property.Name, data[entity]);
                 }
                 else
                 {
-                    var data = (float4*)PropertyData[i];
+                    var data = (float4*)m_PropertyData[i];
                     batch.PropertyVectorAdd(property.Name, data[entity]);
                 }
             }
@@ -141,8 +141,8 @@ namespace Graphix
 
         public void EndChunk()
         {
-            UnsafeUtility.Free(PropertyData, Allocator.Temp);
-            PropertyData = null;
+            UnsafeUtility.Free(m_PropertyData, Allocator.Temp);
+            m_PropertyData = null;
         }
 
         public void Clear()

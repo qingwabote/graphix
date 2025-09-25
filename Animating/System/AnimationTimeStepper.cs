@@ -6,6 +6,11 @@ namespace Graphix
 {
     public partial struct AnimationTimeStepper : ISystem
     {
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<AnimationState>();
+        }
+
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {

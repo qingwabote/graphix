@@ -16,7 +16,7 @@ namespace Unity.Rendering
 
         private static readonly int s_Batches = Profile.DefineEntry("Batches");
         private static readonly int s_Entities = Profile.DefineEntry("Entities");
-        private static readonly int s_DrawEntry = Profile.DefineEntry("Draw");
+        private static readonly int s_Graphics = Profile.DefineEntry("Graphics");
 
         static EntitiesGraphicsSystem()
         {
@@ -43,7 +43,7 @@ namespace Unity.Rendering
 
         protected override void OnUpdate()
         {
-            using (new Profile.Scope(s_DrawEntry))
+            using (new Profile.Scope(s_Graphics))
             {
                 var materialMeshArray = MaterialMeshArray.GetInstance(EntityManager);
 
