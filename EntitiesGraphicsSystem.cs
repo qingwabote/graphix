@@ -52,18 +52,45 @@ namespace Unity.Rendering
                 int entities = 0;
                 foreach (var batch in Queue.Drain())
                 {
-                    s_MPB.Clear();
-                    batch.PropertyDrain(s_MPB);
-
-                    var rp = new RenderParams(batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material))
+                    var material = batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material);
+                    var mesh = materialMeshArray.Meshes[-batch.Mesh];
+                    if (material.enableInstancing)
                     {
-                        matProps = s_MPB
-                    };
-                    Graphics.RenderMeshInstanced(rp, materialMeshArray.Meshes[-batch.Mesh], 0, batch.Worlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
-                    entities += batch.Count;
+                        s_MPB.Clear();
+                        batch.PropertyToBlock(s_MPB);
+                        var rp = new RenderParams(material)
+                        {
+                            matProps = s_MPB
+                        };
+                        Graphics.RenderMeshInstanced(rp, mesh, 0, batch.LocalToWorlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
+                    }
+                    else
+                    {
+                        if (batch.PropertyAcquired)
+                        {
+                            for (int i = 0; i < batch.Count; i++)
+                            {
+                                s_MPB.Clear();
+                                batch.PropertyToBlock(i, s_MPB);
+                                var rp = new RenderParams(material)
+                                {
+                                    matProps = s_MPB
+                                };
+                                Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
+                            }
+                        }
+                        else
+                        {
+                            var rp = new RenderParams(material);
+                            for (int i = 0; i < batch.Count; i++)
+                            {
+                                Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
+                            }
+                        }
 
-                    batch.Worlds.Clear();
-                    batch.Count = 0;
+                    }
+                    entities += batch.Count;
+                    batch.Clear();
                 }
                 Profile.Delta(s_Entities, entities);
             }

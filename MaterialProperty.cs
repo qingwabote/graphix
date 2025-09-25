@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
@@ -10,6 +9,14 @@ namespace Graphix
 {
     public readonly struct MaterialProperty
     {
+        struct PropertyComparer : IComparer<MaterialProperty>
+        {
+            public int Compare(MaterialProperty x, MaterialProperty y)
+            {
+                return x.Name.CompareTo(y.Name);
+            }
+        }
+
         static public DynamicComponentTypeHandle[] Handles;
 
         // use TypeIndex of ComponentType as key, ignore AccessModeType
@@ -39,6 +46,7 @@ namespace Graphix
                 if (s_TypeToProperty.TryGetValue(type.TypeIndex, out MaterialProperty property))
                     properties.Add(property);
             }
+            NativeSortExtension.Sort(properties, new PropertyComparer());
 
             s_ArchetypeToProperty.Add(archetype, output = properties.AsReadOnly());
 
@@ -60,7 +68,7 @@ namespace Graphix
                     if (attributes.Length > 0)
                     {
                         var attribute = (MaterialPropertyAttribute)attributes[0];
-                        var property = new MaterialProperty(handles.Count, Shader.PropertyToID(attribute.Name), (short)UnsafeUtility.SizeOf(type));
+                        var property = new MaterialProperty(Shader.PropertyToID(attribute.Name), (short)UnsafeUtility.SizeOf(type), handles.Count);
                         handles.Add(entityManager.GetDynamicComponentTypeHandle(ComponentType.ReadOnly(typeInfo.TypeIndex)));
                         s_TypeToProperty.Add(typeInfo.TypeIndex, property);
                     }
@@ -72,15 +80,15 @@ namespace Graphix
         }
 
 
-        public readonly int Type;
         public readonly int Name;
         public readonly short Size;
+        public readonly int Type;
 
-        public MaterialProperty(int type, int name, short size)
+        public MaterialProperty(int name, short size, int type)
         {
-            Type = type;
             Name = name;
             Size = size;
+            Type = type;
         }
     }
 }

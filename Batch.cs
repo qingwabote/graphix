@@ -15,12 +15,14 @@ namespace Graphix
         public int Mesh;
         public int Material;
 
-        public NativeList<float4x4> Worlds = new(Allocator.Persistent);
-        public int Count;
+        public NativeList<float4x4> LocalToWorlds = new(Allocator.Persistent);
+        public int Count => LocalToWorlds.Length;
 
         private readonly Dictionary<int, Texture> m_Textures = new();
         private readonly Dictionary<int, List<float>> m_Floats = new();
         private readonly Dictionary<int, List<Vector4>> m_Vectors = new();
+
+        public bool PropertyAcquired => m_Floats.Count > 0 || m_Vectors.Count > 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void PropertyTextureBind(int name, Texture texture)
@@ -58,24 +60,43 @@ namespace Graphix
             list.Add(value);
         }
 
-        public void PropertyDrain(MaterialPropertyBlock output)
+        public void PropertyToBlock(MaterialPropertyBlock output)
         {
             foreach (var (id, texture) in m_Textures)
             {
                 output.SetTexture(id, texture);
             }
-            m_Textures.Clear();
 
             foreach (var (id, list) in m_Floats)
             {
                 output.SetFloatArray(id, list);
             }
-            m_Floats.Clear();
 
             foreach (var (id, list) in m_Vectors)
             {
                 output.SetVectorArray(id, list);
             }
+        }
+
+        public void PropertyToBlock(int index, MaterialPropertyBlock output)
+        {
+            foreach (var (id, list) in m_Floats)
+            {
+                output.SetFloat(id, list[index]);
+            }
+
+            foreach (var (id, list) in m_Vectors)
+            {
+                output.SetVector(id, list[index]);
+            }
+        }
+
+        public void Clear()
+        {
+            LocalToWorlds.Clear();
+
+            m_Textures.Clear();
+            m_Floats.Clear();
             m_Vectors.Clear();
         }
     }

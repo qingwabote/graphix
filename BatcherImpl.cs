@@ -29,9 +29,48 @@ namespace Graphix
         }
     }
 
-    public unsafe class BatcherImpl<TKey, TSorter> where TSorter : IBatchSorter<TKey>
+    public unsafe class BatcherImpl<TKey, TSorter> where TKey : unmanaged, IEquatable<TKey> where TSorter : IBatchSorter<TKey>
     {
-        private readonly Dictionary<TKey, int> m_Cache = new();
+        struct KeyWithProperty : IEquatable<KeyWithProperty>
+        {
+            public TKey Key;
+            public UnsafeList<MaterialProperty>.ReadOnly Properties;
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = Key.GetHashCode();
+                    for (int i = 0; i < Properties.Length; i++)
+                    {
+                        hash = hash * 31 + Properties.Ptr[i].Name;
+                    }
+                    return hash;
+                }
+            }
+
+            public bool Equals(KeyWithProperty other)
+            {
+                if (!Key.Equals(other.Key))
+                {
+                    return false;
+                }
+                if (Properties.Length != other.Properties.Length)
+                {
+                    return false;
+                }
+                for (int i = 0; i < Properties.Length; i++)
+                {
+                    if (Properties.Ptr[i].Name != other.Properties.Ptr[i].Name)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
+        private readonly Dictionary<KeyWithProperty, int> m_Cache = new();
 
         public TSorter Sorter = default;
 
@@ -54,7 +93,11 @@ namespace Graphix
         public void Add(MaterialMeshInfo mm, in LocalToWorld world, int entity)
         {
             Batch batch;
-            TKey key = Sorter.Key(mm, entity);
+            KeyWithProperty key = new()
+            {
+                Key = Sorter.Key(mm, entity),
+                Properties = Properties
+            };
             if (m_Cache.TryGetValue(key, out int index))
             {
                 batch = EntitiesGraphicsSystem.Queue.Data[index];
@@ -93,8 +136,7 @@ namespace Graphix
                     batch.PropertyVectorAdd(property.Name, data[entity]);
                 }
             }
-            batch.Worlds.Add(world.Value);
-            batch.Count++;
+            batch.LocalToWorlds.Add(world.Value);
         }
 
         public void EndChunk()
