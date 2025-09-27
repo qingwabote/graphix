@@ -18,7 +18,7 @@ namespace Graphix
             List<Mesh> meshes = new() { null };
 
             EntityCommandBuffer ecb = new(Allocator.TempJob);
-            foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab))
+            foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities))
             {
                 if (!material2index.TryGetValue(mm.Material, out var materialIndex))
                 {
@@ -40,7 +40,7 @@ namespace Graphix
                     Mesh = -meshIndex
                 });
             }
-            foreach (var (mma, entity) in SystemAPI.Query<MaterialMeshArrayBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab))
+            foreach (var (mma, entity) in SystemAPI.Query<MaterialMeshArrayBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities))
             {
                 var mmb = ecb.AddBuffer<MaterialMeshElement>(entity);
                 var count = mma.Materials.Length;
