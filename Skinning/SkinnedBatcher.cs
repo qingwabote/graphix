@@ -34,16 +34,16 @@ namespace Graphix
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
                 SkinInfo.Update(ref state);
 
-                s_Batcher.Sorter.SkinArray = SkinArray.GetInstance(ref state);
-
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
+                s_Batcher.Sorter.SkinArray = SkinArray.GetInstance(ref state);
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshElement>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
+                    s_Batcher.Sorter.SkinInfos = chunk.GetNativeArray(ref SkinInfo);
+
                     s_Batcher.BeginChunk(ref state, chunk);
                     var mma = chunk.GetBufferAccessor(ref MaterialMeshElement);
                     var worlds = chunk.GetNativeArray(ref LocalToWorld);
-                    s_Batcher.Sorter.SkinInfos = chunk.GetNativeArray(ref SkinInfo);
                     for (int entity = 0; entity < chunk.Count; entity++)
                     {
                         var mmb = mma[entity];

@@ -14,11 +14,16 @@ namespace Graphix
 
         public void OnCreate(ref SystemState state)
         {
-            m_BatchEntry = Profile.DefineEntry("Batch");
+            state.RequireForUpdate<MaterialMeshInfo>();
         }
 
         unsafe public void OnUpdate(ref SystemState state)
         {
+            if (m_BatchEntry == 0)
+            {
+                m_BatchEntry = Profile.DefineEntry("Batch");
+            }
+
             using (new Profile.Scope(m_BatchEntry))
             {
                 var MaterialMesh = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(true);

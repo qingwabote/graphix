@@ -1,16 +1,9 @@
 using System;
-using System.Runtime.InteropServices;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace Graphix
 {
-    [StructLayout(LayoutKind.Sequential, Size = 12)]
-    public unsafe struct Vec3 { }
-
-    [StructLayout(LayoutKind.Sequential, Size = 16)]
-    public unsafe struct Quat { }
-
     public enum ChannelPath
     {
         TRANSLATION,
@@ -61,60 +54,7 @@ namespace Graphix
             return ~head;
         }
 
-        public unsafe void Lerp(float* result, float* a, float* b, float t)
-        {
-            result[0] = a[0] + t * (b[0] - a[0]);
-            result[1] = a[1] + t * (b[1] - a[1]);
-            result[2] = a[2] + t * (b[2] - a[2]);
-        }
-
-        public unsafe void Slerp(float* result, float* a, float* b, float t)
-        {
-            // benchmarks:
-            //    http://jsperf.com/quaternion-slerp-implementations
-
-            float scale0 = 0;
-            float scale1 = 0;
-            float bx = b[0];
-            float by = b[1];
-            float bz = b[2];
-            float bw = b[3];
-
-            // calc cosine
-            float cosom = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
-            // adjust signs (if necessary)
-            if (cosom < 0.0)
-            {
-                cosom = -cosom;
-                bx = -bx;
-                by = -by;
-                bz = -bz;
-                bw = -bw;
-            }
-            // calculate coefficients
-            if ((1.0 - cosom) > 0.000001)
-            {
-                // standard case (slerp)
-                float omega = math.acos(cosom);
-                float sinom = math.sin(omega);
-                scale0 = math.sin((1.0f - t) * omega) / sinom;
-                scale1 = math.sin(t * omega) / sinom;
-            }
-            else
-            {
-                // "from" and "to" quaternions are very close
-                //  ... so we can do a linear interpolation
-                scale0 = 1.0f - t;
-                scale1 = t;
-            }
-            // calculate final values
-            result[0] = scale0 * a[0] + scale1 * bx;
-            result[1] = scale0 * a[1] + scale1 * by;
-            result[2] = scale0 * a[2] + scale1 * bz;
-            result[3] = scale0 * a[3] + scale1 * bw;
-        }
-
-        public unsafe void Vec3(Vec3* output, Vec3* channel_output, float time)
+        public unsafe void Vec3(float3* output, float3* channel_output, float time)
         {
             int index = Seek(time);
             if (index >= 0)
@@ -127,11 +67,11 @@ namespace Graphix
                 int prev = next - 1;
 
                 float t = (time - Input[prev]) / (Input[next] - Input[prev]);
-                Lerp((float*)output, (float*)(channel_output + prev), (float*)(channel_output + next), t);
+                *output = math.lerp(*(channel_output + prev), *(channel_output + next), t);
             }
         }
 
-        public unsafe void Quat(Quat* output, Quat* channel_output, float time)
+        public unsafe void Quat(quaternion* output, quaternion* channel_output, float time)
         {
             int index = Seek(time);
             if (index >= 0)
@@ -144,7 +84,7 @@ namespace Graphix
                 int prev = next - 1;
 
                 float t = (time - Input[prev]) / (Input[next] - Input[prev]);
-                Slerp((float*)output, (float*)(channel_output + prev), (float*)(channel_output + next), t);
+                *output = math.slerp(*(channel_output + prev), *(channel_output + next), t);
             }
         }
 
@@ -154,10 +94,10 @@ namespace Graphix
             {
                 case ChannelPath.TRANSLATION:
                 case ChannelPath.SCALE:
-                    Vec3((Vec3*)output, (Vec3*)this.Output.GetUnsafePtr(), time);
+                    Vec3((float3*)output, (float3*)this.Output.GetUnsafePtr(), time);
                     return 3;
                 case ChannelPath.ROTATION:
-                    Quat((Quat*)output, (Quat*)this.Output.GetUnsafePtr(), time);
+                    Quat((quaternion*)output, (quaternion*)this.Output.GetUnsafePtr(), time);
                     return 4;
 
                 default:
