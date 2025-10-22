@@ -1,5 +1,4 @@
 using System;
-using Unity.Collections;
 using Unity.Rendering;
 using UnityEngine;
 
@@ -22,28 +21,27 @@ namespace Graphix
         }
     }
 
-    public unsafe struct SkinnedBatchSorter : IBatchSorter<SkinnedBatchKey>
+    public struct SkinnedBatchSorter : IBatchSorter<SkinnedBatchKey, SkinInfo>
     {
         private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
 
         public SkinArray SkinArray;
-        public NativeArray<SkinInfo> SkinInfos;
 
-        public SkinnedBatchKey Key(MaterialMeshInfo mm, int entity)
+        public SkinnedBatchKey KeyGen(MaterialMeshInfo mm, SkinInfo skin)
         {
             return new SkinnedBatchKey
             {
                 Material = mm.Material,
                 Mesh = mm.Mesh,
-                Skin = SkinInfos[entity].Proto
+                Skin = skin.Proto
             };
         }
 
-        public void Init(Batch batch, MaterialMeshInfo mm, int entity)
+        public void BatchInit(Batch batch, MaterialMeshInfo mm, SkinInfo skin)
         {
             batch.Material = mm.Material;
             batch.Mesh = mm.Mesh;
-            batch.PropertyTextureBind(s_JOINTS, SkinArray.GetStore(SkinInfos[entity]).Texture);
+            batch.PropertyTextureBind(s_JOINTS, SkinArray.GetStore(skin).Texture);
         }
     }
 }

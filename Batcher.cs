@@ -8,7 +8,7 @@ namespace Graphix
 {
     public partial struct Batcher : ISystem
     {
-        static private BatcherImpl<MaterialMeshInfo, BatchSorter> s_Batcher = new();
+        static private BatcherImpl<MaterialMeshInfo, BatchSorter, NoParam> s_Batcher = new();
 
         private int m_BatchEntry;
 
@@ -17,11 +17,11 @@ namespace Graphix
             state.RequireForUpdate<MaterialMeshInfo>();
         }
 
-        unsafe public void OnUpdate(ref SystemState state)
+        public void OnUpdate(ref SystemState state)
         {
             if (m_BatchEntry == 0)
             {
-                m_BatchEntry = Profile.DefineEntry("Batch");
+                m_BatchEntry = Profile.DefineEntry("Batcher");
             }
 
             using (new Profile.Scope(m_BatchEntry))
@@ -33,14 +33,15 @@ namespace Graphix
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
-                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfo>().Build().ToArchetypeChunkArray(Allocator.Temp))
+                // make MaterialMeshInfo RW for WriteGroup
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAllRW<MaterialMeshInfo>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     s_Batcher.BeginChunk(ref state, chunk);
                     var mms = chunk.GetNativeArray(ref MaterialMesh);
                     var worlds = chunk.GetNativeArray(ref LocalToWorld);
                     for (int i = 0; i < chunk.Count; i++)
                     {
-                        s_Batcher.Add(mms[i], worlds.ElementAtRO(i), i);
+                        s_Batcher.Add(i, worlds.ElementAtRO(i).Value, mms[i]);
                     }
                     s_Batcher.EndChunk();
                 }

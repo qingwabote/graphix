@@ -8,7 +8,7 @@ namespace Graphix
 {
     public partial struct SkinnedBatcher : ISystem
     {
-        private static BatcherImpl<SkinnedBatchKey, SkinnedBatchSorter> s_Batcher = new();
+        private static BatcherImpl<SkinnedBatchKey, SkinnedBatchSorter, SkinInfo> s_Batcher = new();
 
         private int m_BatchEntry;
 
@@ -22,7 +22,7 @@ namespace Graphix
         {
             if (m_BatchEntry == 0)
             {
-                m_BatchEntry = Profile.DefineEntry("SkinnedBatch");
+                m_BatchEntry = Profile.DefineEntry("SkinnedBatcher");
             }
 
             using (new Profile.Scope(m_BatchEntry))
@@ -39,18 +39,17 @@ namespace Graphix
                 s_Batcher.Sorter.SkinArray = SkinArray.GetInstance(ref state);
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshElement>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
-                    s_Batcher.Sorter.SkinInfos = chunk.GetNativeArray(ref SkinInfo);
-
                     s_Batcher.BeginChunk(ref state, chunk);
                     var mma = chunk.GetBufferAccessor(ref MaterialMeshElement);
                     var worlds = chunk.GetNativeArray(ref LocalToWorld);
+                    var skins = chunk.GetNativeArray(ref SkinInfo);
                     for (int entity = 0; entity < chunk.Count; entity++)
                     {
                         var mmb = mma[entity];
                         var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                         for (int i = 0; i < mmb.Length; i++)
                         {
-                            s_Batcher.Add(mmp[i], worlds.ElementAtRO(entity), entity);
+                            s_Batcher.Add(entity, worlds.ElementAtRO(entity).Value, mmp[i], skins[i]);
                         }
                     }
                     s_Batcher.EndChunk();

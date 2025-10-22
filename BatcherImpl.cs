@@ -5,31 +5,32 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Rendering;
-using Unity.Transforms;
 
 namespace Graphix
 {
-    public unsafe interface IBatchSorter<T>
+    public struct NoParam { }
+
+    public interface IBatchSorter<TKey, TParam>
     {
-        T Key(MaterialMeshInfo mm, int entity);
-        void Init(Batch batch, MaterialMeshInfo mm, int entity);
+        TKey KeyGen(MaterialMeshInfo mm, TParam param);
+        void BatchInit(Batch batch, MaterialMeshInfo mm, TParam param);
     }
 
-    public unsafe struct BatchSorter : IBatchSorter<MaterialMeshInfo>
+    public struct BatchSorter : IBatchSorter<MaterialMeshInfo, NoParam>
     {
-        public MaterialMeshInfo Key(MaterialMeshInfo mm, int entity)
+        public MaterialMeshInfo KeyGen(MaterialMeshInfo mm, NoParam param)
         {
             return mm;
         }
 
-        public void Init(Batch batch, MaterialMeshInfo mm, int entity)
+        public void BatchInit(Batch batch, MaterialMeshInfo mm, NoParam param)
         {
             batch.Material = mm.Material;
             batch.Mesh = mm.Mesh;
         }
     }
 
-    public unsafe class BatcherImpl<TKey, TSorter> where TKey : unmanaged, IEquatable<TKey> where TSorter : IBatchSorter<TKey>
+    public unsafe class BatcherImpl<TKey, TSorter, TParam> where TKey : unmanaged, IEquatable<TKey> where TSorter : IBatchSorter<TKey, TParam>
     {
         struct KeyWithProperty : IEquatable<KeyWithProperty>
         {
@@ -90,12 +91,12 @@ namespace Graphix
             }
         }
 
-        public void Add(MaterialMeshInfo mm, in LocalToWorld world, int entity)
+        public void Add(int entity, in float4x4 world, MaterialMeshInfo mm, TParam param = default)
         {
             Batch batch;
             KeyWithProperty key = new()
             {
-                Key = Sorter.Key(mm, entity),
+                Key = Sorter.KeyGen(mm, param),
                 Properties = m_Properties
             };
             if (m_Cache.TryGetValue(key, out int index))
@@ -106,7 +107,7 @@ namespace Graphix
             {
                 m_Cache.Add(key, EntitiesGraphicsSystem.Queue.Count);
                 batch = EntitiesGraphicsSystem.Queue.Push();
-                Sorter.Init(batch, mm, entity);
+                Sorter.BatchInit(batch, mm, param);
 
                 for (int i = 0; i < m_Properties.Length; i++)
                 {
@@ -136,12 +137,12 @@ namespace Graphix
                     batch.PropertyVectorAdd(property.Name, data[entity]);
                 }
             }
-            batch.LocalToWorlds.Add(world.Value);
+            batch.LocalToWorlds.Add(world);
         }
 
         public void EndChunk()
         {
-            UnsafeUtility.Free(m_PropertyData, Allocator.Temp);
+            m_Properties = default;
             m_PropertyData = null;
         }
 

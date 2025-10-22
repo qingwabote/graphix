@@ -15,7 +15,7 @@ namespace Unity.Rendering
         private static readonly MaterialPropertyBlock s_MPB = new();
 
         private static readonly int s_Batches = Profile.DefineEntry("Batches");
-        private static readonly int s_Entities = Profile.DefineEntry("Entities");
+        private static readonly int s_Entities = Profile.DefineEntry("Instances");
         private static readonly int s_Graphics = Profile.DefineEntry("Graphics");
 
         static EntitiesGraphicsSystem()
@@ -49,7 +49,7 @@ namespace Unity.Rendering
 
                 Profile.Delta(s_Batches, Queue.Count);
 
-                int entities = 0;
+                int instances = 0;
                 foreach (var batch in Queue.Drain())
                 {
                     var material = batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material);
@@ -89,10 +89,10 @@ namespace Unity.Rendering
                         }
 
                     }
-                    entities += batch.Count;
+                    instances += batch.Count;
                     batch.Clear();
                 }
-                Profile.Delta(s_Entities, entities);
+                Profile.Delta(s_Entities, instances);
             }
         }
     }
