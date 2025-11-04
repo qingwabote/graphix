@@ -49,16 +49,14 @@ namespace Graphix
                             case ChannelPath.TRANSLATION:
                                 if (target != Entity.Null)
                                 {
-                                    // UnityGLTF ToUnityVector3Convert
-                                    SystemAPI.GetComponentRW<LocalTransform>(target).ValueRW.Position = new float3(-result[offset], result[offset + 1], result[offset + 2]);
+                                    SystemAPI.GetComponentRW<LocalTransform>(target).ValueRW.Position = new float3(result[offset], result[offset + 1], result[offset + 2]);
                                 }
                                 offset += 3;
                                 break;
                             case ChannelPath.ROTATION:
                                 if (target != Entity.Null)
                                 {
-                                    // UnityGLTF ToUnityQuaternionConvert
-                                    SystemAPI.GetComponentRW<LocalTransform>(target).ValueRW.Rotation = new float4(result[offset], -result[offset + 1], -result[offset + 2], result[offset + 3]);
+                                    SystemAPI.GetComponentRW<LocalTransform>(target).ValueRW.Rotation = new float4(result[offset], result[offset + 1], result[offset + 2], result[offset + 3]);
                                 }
                                 offset += 4;
                                 break;

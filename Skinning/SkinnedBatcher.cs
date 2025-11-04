@@ -3,6 +3,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 using Unity.Rendering;
+using UnityEngine;
 
 namespace Graphix
 {
@@ -49,7 +50,7 @@ namespace Graphix
                         var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                         for (int i = 0; i < mmb.Length; i++)
                         {
-                            s_Batcher.Add(entity, worlds.ElementAtRO(entity).Value, mmp[i], skins[i]);
+                            s_Batcher.Add(entity, worlds.ElementAtRO(entity).Value, mmp[i], skins[entity]);
                         }
                     }
                     s_Batcher.EndChunk();
