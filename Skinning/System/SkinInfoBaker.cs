@@ -15,17 +15,19 @@ namespace Graphix
             EntityCommandBuffer ecb = new(Allocator.TempJob);
             foreach (var (info, entity) in SystemAPI.Query<SkinInfoBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab))
             {
-                if (!skin2index.TryGetValue(info.Proto, out var skinIndex))
+                if (!skin2index.TryGetValue(info.Skin, out var skinIndex))
                 {
                     skinIndex = skins.Count;
-                    skins.Add(info.Proto);
-                    skin2index.Add(info.Proto, skinIndex);
+                    skins.Add(info.Skin);
+                    skin2index.Add(info.Skin, skinIndex);
                 }
 
                 ecb.AddComponent(entity, new SkinInfo
                 {
-                    Proto = skinIndex,
-                    Baking = info.Baking
+                    Skin = skinIndex,
+                    Baking = info.Baking,
+                    JointMeta = info.Skin.JointMeta,
+                    Joint = info.Joint
                 });
             }
 

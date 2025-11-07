@@ -14,7 +14,7 @@ namespace Graphix
         [NonSerialized]
         public BlobAssetReference<Clip> Blob;
 
-        [HideInInspector]
+        // [HideInInspector]
         public string[] Nodes;
 
         public void OnBeforeSerialize()

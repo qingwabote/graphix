@@ -1,6 +1,8 @@
 using System;
+using Bastard;
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEditor;
 using UnityEngine;
 
 namespace Graphix
@@ -83,25 +85,10 @@ namespace Graphix
                     Outputs = outputs
                 });
 
-                foreach (var node in clip.Nodes)
+                foreach (var path in clip.Nodes)
                 {
-                    var target = authoring.transform;
-                    foreach (var name in node.Split("/"))
-                    {
-                        for (int i = 0; i < target.childCount; i++)
-                        {
-                            var child = target.GetChild(i);
-                            if (child.name == name)
-                            {
-                                target = child;
-                                break;
-                            }
-                        }
-                    }
-                    channelTargets.Add(new ChannelTarget
-                    {
-                        Value = GetEntity(target, TransformUsageFlags.Dynamic)
-                    });
+                    var target = authoring.transform.GetChildByPath(path);
+                    channelTargets.Add(new ChannelTarget { Value = GetEntity(target, TransformUsageFlags.Dynamic) });
                 }
             }
 

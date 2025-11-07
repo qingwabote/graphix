@@ -1,5 +1,5 @@
-#ifndef BUDGET_SKINNING_INCLUDED
-#define BUDGET_SKINNING_INCLUDED
+#ifndef GRAPHIX_SKINNING_INCLUDED
+#define GRAPHIX_SKINNING_INCLUDED
 
 void SkinningDeform(inout float3 pos, float4 joints, float4 weights, Texture2D jointMap, float width, float offset)
 {

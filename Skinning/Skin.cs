@@ -9,9 +9,10 @@ using UnityEngine;
 
 namespace Graphix
 {
-    public struct InverseBindMatrices
+    public struct JointMeta
     {
-        public BlobArray<float4x4> Data;
+        public BlobArray<float4x4> InverseBindMatrices;
+        public BlobArray<int> Locations;
     }
 
     public class Skin : ScriptableObject, ISerializationCallbackReceiver
@@ -63,8 +64,7 @@ namespace Graphix
         {
             get
             {
-                m_Persistent ??= new Store(Joints.Length);
-                return m_Persistent;
+                return m_Persistent ??= new Store(Joints.Length);
             }
         }
 
@@ -73,26 +73,25 @@ namespace Graphix
         {
             get
             {
-                m_Transient ??= new TransientStore(Joints.Length);
-                return m_Transient;
+                return m_Transient ??= new TransientStore(Joints.Length);
             }
         }
 
-        [HideInInspector]
+        // [HideInInspector]
         public string[] Joints;
 
         [SerializeField, HideInInspector]
-        private byte[] m_InverseBindMatrices;
+        private byte[] m_JointMeta;
 
         [NonSerialized]
-        public BlobAssetReference<InverseBindMatrices> InverseBindMatrices;
+        public BlobAssetReference<JointMeta> JointMeta;
 
         public void OnBeforeSerialize()
         {
             if (this == null) { return; }
 
             var writer = new MemoryBinaryWriter();
-            BlobAssetSerializeExtensions.Write(writer, InverseBindMatrices);
+            BlobAssetSerializeExtensions.Write(writer, JointMeta);
             var bytes = new byte[writer.Length];
             unsafe
             {
@@ -101,7 +100,7 @@ namespace Graphix
                     UnsafeUtility.MemCpy(dst, writer.Data, writer.Length);
                 }
             }
-            m_InverseBindMatrices = bytes;
+            m_JointMeta = bytes;
             writer.Dispose();
         }
 
@@ -111,14 +110,14 @@ namespace Graphix
 
             unsafe
             {
-                fixed (byte* src = m_InverseBindMatrices)
+                fixed (byte* src = m_JointMeta)
                 {
-                    var reader = new MemoryBinaryReader(src, m_InverseBindMatrices.Length);
-                    InverseBindMatrices = BlobAssetSerializeExtensions.Read<InverseBindMatrices>(reader);
+                    var reader = new MemoryBinaryReader(src, m_JointMeta.Length);
+                    JointMeta = BlobAssetSerializeExtensions.Read<JointMeta>(reader);
                     reader.Dispose();
                 }
             }
-            m_InverseBindMatrices = null;
+            m_JointMeta = null;
         }
     }
 }

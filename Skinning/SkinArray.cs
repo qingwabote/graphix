@@ -27,9 +27,9 @@ namespace Graphix
         public int HashCode;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Skin.Store GetStore(SkinInfo info)
+        public Skin.Store GetCurrentStore(SkinInfo info)
         {
-            return info.Baking ? Data[info.Proto].Persistent : Data[info.Proto].Transient;
+            return info.Baking ? Data[info.Skin].Persistent : Data[info.Skin].Transient;
         }
 
         public override int GetHashCode()

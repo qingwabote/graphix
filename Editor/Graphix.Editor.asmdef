@@ -5,7 +5,8 @@
         "Unity.Mathematics",
         "Unity.Collections",
         "Unity.Entities",
-        "Graphix"
+        "Graphix",
+        "Bastard"
     ],
     "includePlatforms": [
         "Editor"

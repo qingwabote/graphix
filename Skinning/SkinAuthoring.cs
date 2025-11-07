@@ -2,15 +2,31 @@ using System;
 using System.Collections.Generic;
 using Bastard;
 using Unity.Entities;
+using Unity.Rendering;
 using UnityEngine;
 
 namespace Graphix
 {
     public class SkinAuthoring : MonoBehaviour
     {
-        [HideInInspector]
-        public Skin Proto;
+        public Skin Skin;
         public bool Baking;
+    }
+
+    [TemporaryBakingType]
+    public class SkinInfoBaking : IComponentData
+    {
+        public Skin Skin;
+        public bool Baking;
+        public int Joint;
+    }
+
+    public struct SkinInfo : IComponentData
+    {
+        public int Skin;
+        public bool Baking;
+        public BlobAssetReference<JointMeta> JointMeta;
+        public int Joint;
     }
 
     public struct SkinNode : IBufferElementData
@@ -19,19 +35,15 @@ namespace Graphix
         public int Parent;
     }
 
-    public struct SkinJointDataView
+    public struct JointSource : IComponentData
     {
-        public long Data;
-        public int Offset;
+        public long Value;
     }
 
-    public struct SkinJoint : IComponentData
+    [MaterialProperty("_JointOffset")]
+    public struct JointOffset : IComponentData
     {
-        public BlobAssetReference<InverseBindMatrices> InverseBindMatrices;
-
-        public int Index;
-
-        public Transient<SkinJointDataView> DataView;
+        public float Value;
     }
 
     class SkinBaker : Baker<SkinAuthoring>
@@ -42,19 +54,23 @@ namespace Graphix
 
             var transforms = new List<Transform>();
             {
-                var parent1 = authoring.transform;
-                var path = authoring.Proto.Joints[0].Split("/");
+                var parent = authoring.transform;
+
+                // assume Joints[0] is root joint
+                var root = authoring.Skin.Joints[0];
+                var path = root.Split("/");
+                // add parents of root joint if any
                 for (int i = 0; i < path.Length - 1; i++)
                 {
                     var name = path[i];
                     var err = true;
-                    for (int j = 0; j < parent1.childCount; j++)
+                    for (int j = 0; j < parent.childCount; j++)
                     {
-                        var child = parent1.GetChild(j);
+                        var child = parent.GetChild(j);
                         if (child.name == name)
                         {
                             transforms.Add(child);
-                            parent1 = child;
+                            parent = child;
                             err = false;
                             break;
                         }
@@ -66,26 +82,12 @@ namespace Graphix
                 }
             }
             var JointStart = transforms.Count;
-            foreach (var path in authoring.Proto.Joints)
+            foreach (var path in authoring.Skin.Joints)
             {
-                var target = authoring.transform;
-                foreach (var name in path.Split("/"))
+                var target = authoring.transform.GetChildByPath(path);
+                if (!target)
                 {
-                    var err = true;
-                    for (int i = 0; i < target.childCount; i++)
-                    {
-                        var child = target.GetChild(i);
-                        if (child.name == name)
-                        {
-                            target = child;
-                            err = false;
-                            break;
-                        }
-                    }
-                    if (err)
-                    {
-                        throw new Exception($"{name} not exists");
-                    }
+                    throw new Exception($"{path} not exists");
                 }
                 transforms.Add(target);
             }
@@ -104,22 +106,20 @@ namespace Graphix
                 }
                 nodes.Add(new SkinNode
                 {
-                    Target = GetEntity(child.gameObject, TransformUsageFlags.Dynamic),
+                    Target = GetEntity(child, TransformUsageFlags.Dynamic),
                     Parent = parent
                 });
             }
-            AddComponent(entity, new SkinJoint
-            {
-                Index = JointStart,
-                InverseBindMatrices = authoring.Proto.InverseBindMatrices
-            });
-            AddComponent<SkinOffset>(entity);
             AddComponentObject(entity, new SkinInfoBaking
             {
-                Proto = authoring.Proto,
-                Baking = authoring.Baking
+                Skin = authoring.Skin,
+                Baking = authoring.Baking,
+                Joint = JointStart,
             });
+            AddComponent<JointSource>(entity);
+            AddComponent<JointOffset>(entity);
 
+            // "The transform of the node that the skin is attached to is ignored", we use a single entity to hold all MaterialMeshes. https://github.khronos.org/glTF-Tutorials/gltfTutorial/gltfTutorial_020_Skins.html
             var materails = new List<Material>();
             var meshes = new List<Mesh>();
             var renderers = GetComponentsInChildren<SkinnedMeshRenderer>();

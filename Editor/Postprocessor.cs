@@ -3,6 +3,11 @@ using UnityEditor;
 using UnityEngine;
 using Unity.Entities;
 using Unity.Collections;
+using System.Linq;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Mathematics;
+using System;
+using Bastard;
 
 namespace Graphix
 {
@@ -132,8 +137,17 @@ namespace Graphix
                 }
                 else
                 {
-                    Debug.LogError($"Unsupported property {binding0.propertyName}");
-                    break;
+                    var parts = binding0.propertyName.Split('.');
+                    var extraNames = new[] { "MotionT", "MotionQ", "RootT", "RootQ", "LeftFootT", "LeftFootQ", "RightFootT", "RightFootQ", "LeftHandT", "LeftHandQ", "RightHandT", "RightHandQ" };
+                    if (extraNames.Contains(parts[0]))
+                    {
+                        index++;
+                    }
+                    else
+                    {
+                        Debug.LogError($"Unsupported property {binding0.propertyName}");
+                        break;
+                    }
                 }
             }
 
@@ -175,28 +189,35 @@ namespace Graphix
                 var skin = ScriptableObject.CreateInstance<Skin>();
                 skin.name = "Skin_0";
 
-                var joints = new string[skinnedRenderer.bones.Length];
+                var joints = new (string Path, int Index)[skinnedRenderer.bones.Length];
                 for (int i = 0; i < joints.Length; i++)
                 {
-                    joints[i] = Utility.RelativePathFrom(skinnedRenderer.bones[i].transform, gameObject.transform);
+                    joints[i].Path = skinnedRenderer.bones[i].transform.RelativePath(gameObject.transform);
+                    joints[i].Index = i;
                 }
-                skin.Joints = joints;
+                Array.Sort(joints, (a, b) =>
                 {
-                    var bindposes = skinnedRenderer.sharedMesh.bindposes;
+                    return string.Compare(a.Path, b.Path, StringComparison.Ordinal);
+                });
+                skin.Joints = joints.Select(x => x.Path).ToArray();
+                {
+                    var bindposes = skinnedRenderer.sharedMesh.GetBindposes();
 
                     var builder = new BlobBuilder(Allocator.Temp);
-                    ref var inverseBindMatrices = ref builder.ConstructRoot<InverseBindMatrices>();
-                    var data = builder.Allocate(ref inverseBindMatrices.Data, bindposes.Length);
-                    for (int i = 0; i < bindposes.Length; i++)
+                    ref var meta = ref builder.ConstructRoot<JointMeta>();
+                    var inverseBindMatrices = builder.Allocate(ref meta.InverseBindMatrices, joints.Length);
+                    var Locations = builder.Allocate(ref meta.Locations, joints.Length);
+                    for (int i = 0; i < joints.Length; i++)
                     {
-                        data[i] = bindposes[i];
+                        inverseBindMatrices[i] = bindposes[joints[i].Index];
+                        Locations[i] = joints[i].Index;
                     }
 
-                    skin.InverseBindMatrices = builder.CreateBlobAssetReference<InverseBindMatrices>(Allocator.Persistent);
+                    skin.JointMeta = builder.CreateBlobAssetReference<JointMeta>(Allocator.Persistent);
                 }
 
                 var skinAuthoring = gameObject.AddComponent<SkinAuthoring>();
-                skinAuthoring.Proto = skin;
+                skinAuthoring.Skin = skin;
 
                 var materials = new Dictionary<Material, Material>();
                 var skinnedRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
