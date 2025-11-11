@@ -96,7 +96,7 @@ namespace Graphix
                             if (animated)
                             {
                                 var anim = animations[i];
-                                var clip = clips[i][anim.ClipIndex];
+                                var clip = clips[i][anim.Index];
                                 var ratio = anim.Time / clip.Duration;
                                 var frame = (int)math.ceil(ratio * (clip.Duration * 60 - 1));
                                 key = new ClipFrame(info.Skin, clip.Blob, frame);

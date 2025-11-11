@@ -31,7 +31,7 @@ namespace Graphix
             {
                 foreach (var (animation, clipBingings, channelTargets, entity) in SystemAPI.Query<RefRO<AnimationState>, DynamicBuffer<ClipBinging>, DynamicBuffer<ChannelTarget>>().WithEntityAccess())
                 {
-                    ref var clipBinging = ref clipBingings.ElementAt(animation.ValueRO.ClipIndex);
+                    ref var clipBinging = ref clipBingings.ElementAt(animation.ValueRO.Index);
                     var result = new NativeArray<float>(clipBinging.Outputs, Allocator.Temp);
                     unsafe
                     {

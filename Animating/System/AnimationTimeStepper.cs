@@ -16,7 +16,7 @@ namespace Graphix
         {
             foreach (var (animation, clipBingings) in SystemAPI.Query<RefRW<AnimationState>, DynamicBuffer<ClipBinging>>())
             {
-                ref var clipBinging = ref clipBingings.ElementAt(animation.ValueRO.ClipIndex);
+                ref var clipBinging = ref clipBingings.ElementAt(animation.ValueRO.Index);
                 var time = animation.ValueRW.Time;
                 var duration = clipBinging.Duration;
 

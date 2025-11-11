@@ -145,8 +145,8 @@ namespace Graphix
                     }
                     else
                     {
-                        Debug.LogError($"Unsupported property {binding0.propertyName}");
-                        break;
+                        Debug.LogWarning($"Unsupported property {binding0.propertyName}");
+                        index++;
                     }
                 }
             }

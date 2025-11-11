@@ -2,7 +2,6 @@ using System;
 using Bastard;
 using Unity.Entities;
 using Unity.Mathematics;
-using UnityEditor;
 using UnityEngine;
 
 namespace Graphix
@@ -23,12 +22,12 @@ namespace Graphix
     class AnimationAuthoring : MonoBehaviour
     {
         public AnimationClip[] Clips;
-        public int ClipIndex;
+        public int Index;
     }
 
     public struct AnimationState : IComponentData
     {
-        public int ClipIndex;
+        public int Index;
         public float Time;
     }
 
@@ -94,7 +93,7 @@ namespace Graphix
 
             AddComponent(entity, new AnimationState
             {
-                ClipIndex = authoring.ClipIndex
+                Index = authoring.Index
             });
         }
     }
