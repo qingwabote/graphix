@@ -58,11 +58,11 @@ namespace Graphix
                     var length = curve0.keys.Length;
                     Debug.Assert(curve1.keys.Length == length && curve2.keys.Length == length && curve3.keys.Length == length);
 
-                    // for (int i = 0; i < length; i++)
-                    // {
-                    //     var time = curve0.keys[i].time;
-                    //     Debug.Assert(curve1.keys[i].time == time && curve2.keys[i].time == time && curve3.keys[i].time == time);
-                    // }
+                    for (int i = 0; i < length; i++)
+                    {
+                        var time = curve0.keys[i].time;
+                        Debug.Assert(curve1.keys[i].time == time && curve2.keys[i].time == time && curve3.keys[i].time == time);
+                    }
 
                     curveGroups.Add(new CurveGroup
                     {
@@ -89,11 +89,11 @@ namespace Graphix
                     var length = curve0.keys.Length;
                     Debug.Assert(curve1.keys.Length == length && curve2.keys.Length == length);
 
-                    // for (int i = 0; i < length; i++)
-                    // {
-                    //     var time = curve0.keys[i].time;
-                    //     Debug.Assert(curve1.keys[i].time == time && curve2.keys[i].time == time && curve3.keys[i].time == time);
-                    // }
+                    for (int i = 0; i < length; i++)
+                    {
+                        var time = curve0.keys[i].time;
+                        Debug.Assert(curve1.keys[i].time == time && curve2.keys[i].time == time);
+                    }
 
                     curveGroups.Add(new CurveGroup
                     {
@@ -120,11 +120,11 @@ namespace Graphix
                     var length = curve0.keys.Length;
                     Debug.Assert(curve1.keys.Length == length && curve2.keys.Length == length);
 
-                    // for (int i = 0; i < length; i++)
-                    // {
-                    //     var time = curve0.keys[i].time;
-                    //     Debug.Assert(curve1.keys[i].time == time && curve2.keys[i].time == time && curve3.keys[i].time == time);
-                    // }
+                    for (int i = 0; i < length; i++)
+                    {
+                        var time = curve0.keys[i].time;
+                        Debug.Assert(curve1.keys[i].time == time && curve2.keys[i].time == time);
+                    }
 
                     curveGroups.Add(new CurveGroup
                     {

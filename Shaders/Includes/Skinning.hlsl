@@ -1,7 +1,7 @@
 #ifndef GRAPHIX_SKINNING_INCLUDED
 #define GRAPHIX_SKINNING_INCLUDED
 
-void SkinningDeform(inout float3 pos, float4 joints, float4 weights, Texture2D jointMap, float width, float offset)
+void SkinningDeform(inout float3 pos, inout float3 normal, float4 joints, float4 weights, Texture2D jointMap, float width, float offset)
 {
     float width_inv = 1.0 / width;
     float offset_texel = offset / 4.0;
@@ -27,11 +27,13 @@ void SkinningDeform(inout float3 pos, float4 joints, float4 weights, Texture2D j
             weights[n]);
     }
     pos = mul(mat, float4(pos, 1.0)).xyz;
+    normal = mul((float3x3)mat, normal); // https://webglfundamentals.org/webgl/lessons/webgl-skinning.html
 }
 
 void SkinningDeform_float(float3 Pos, float4 Joints, float4 Weights, Texture2D JointMap, float Width, float Offset, out float3 Out)
 {
-    SkinningDeform(Pos, Joints, Weights, JointMap, Width, Offset);
+    float3 Normal;
+    SkinningDeform(Pos, Normal, Joints, Weights, JointMap, Width, Offset);
     Out = Pos;
 }
 

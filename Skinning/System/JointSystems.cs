@@ -163,7 +163,7 @@ namespace Graphix
                     }
 
                     ref var inverseBindMatrices = ref skin.JointMeta.Value.InverseBindMatrices;
-                    ref var Locations = ref skin.JointMeta.Value.Locations;
+                    ref var locations = ref skin.JointMeta.Value.Locations;
                     unsafe
                     {
                         var store = (NativeArray<float>*)source.ValueRO.Value;
@@ -172,7 +172,7 @@ namespace Graphix
                         {
                             var m = math.mul(models[i + skin.Joint + 1], inverseBindMatrices[i]);
 
-                            float4x3* m4x3 = matrices + Locations[i];
+                            float4x3* m4x3 = matrices + locations[i];
                             m4x3->c0 = new float4(m.c0.x, m.c0.y, m.c0.z, m.c3.x);
                             m4x3->c1 = new float4(m.c1.x, m.c1.y, m.c1.z, m.c3.y);
                             m4x3->c2 = new float4(m.c2.x, m.c2.y, m.c2.z, m.c3.z);
