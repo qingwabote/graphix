@@ -46,7 +46,6 @@ namespace Graphix
         }
     }
 
-    [UpdateInGroup(typeof(TransformSystemGroup)), UpdateAfter(typeof(LocalToWorldSystem))]
     public partial struct Freezer : ISystem
     {
         public void OnUpdate(ref SystemState state)

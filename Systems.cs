@@ -4,25 +4,32 @@ using Unity.Transforms;
 
 namespace Graphix
 {
-    [UpdateInGroup(typeof(TransformSystemGroup))]
+    [UpdateBefore(typeof(TransformSystemGroup))]
     public partial struct JointAllocator : ISystem { }
 
-    [UpdateInGroup(typeof(TransformSystemGroup)), UpdateAfter(typeof(JointAllocator)), UpdateBefore(typeof(LocalToWorldSystem))]
+    [UpdateAfter(typeof(JointAllocator)), UpdateBefore(typeof(TransformSystemGroup))]
     public partial class AnimationSamplerGroup : ComponentSystemGroup { }
-
-    [UpdateInGroup(typeof(TransformSystemGroup)), UpdateAfter(typeof(AnimationSamplerGroup))]
+    [UpdateAfter(typeof(AnimationSamplerGroup))]
     public partial struct AnimationTimeStepper : ISystem { }
 
-    [UpdateInGroup(typeof(TransformSystemGroup)), UpdateAfter(typeof(AnimationSamplerGroup))]
+    [UpdateAfter(typeof(AnimationSamplerGroup))]
     public partial struct JointUpdater : ISystem { }
-
-    [UpdateInGroup(typeof(TransformSystemGroup)), UpdateAfter(typeof(JointUpdater))]
+    [UpdateAfter(typeof(JointUpdater))]
     public partial struct JointUploader : ISystem { }
+
+
+    [UpdateAfter(typeof(TransformSystemGroup))]
+    public partial struct Freezer : ISystem { }
 
 
     [UpdateInGroup(typeof(LateSimulationSystemGroup)), UpdateBefore(typeof(EntitiesGraphicsSystem))]
     public partial struct Batcher : ISystem { }
-
     [UpdateInGroup(typeof(LateSimulationSystemGroup)), UpdateBefore(typeof(EntitiesGraphicsSystem))]
     public partial struct SkinnedBatcher : ISystem { }
+}
+
+namespace Unity.Rendering
+{
+    [UpdateInGroup(typeof(LateSimulationSystemGroup))]
+    public partial class EntitiesGraphicsSystem : SystemBase { }
 }

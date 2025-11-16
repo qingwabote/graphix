@@ -9,7 +9,7 @@ namespace Graphix
         static public int Transform = Profile.DefineEntry("Transform");
     }
 
-    [UpdateInGroup(typeof(TransformSystemGroup)), UpdateBefore(typeof(LocalToWorldSystem))]
+    [UpdateInGroup(typeof(TransformSystemGroup)), UpdateBefore(typeof(LocalToWorldSystem)), UpdateAfter(typeof(ParentSystem))]
     partial struct BeforeLocalToWorldSystem : ISystem
     {
         public void OnUpdate(ref SystemState state)

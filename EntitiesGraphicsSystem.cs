@@ -5,7 +5,6 @@ using UnityEngine;
 
 namespace Unity.Rendering
 {
-    [UpdateInGroup(typeof(LateSimulationSystemGroup))]
     public partial class EntitiesGraphicsSystem : SystemBase
     {
         private static readonly Registry<Material> s_Materials;
