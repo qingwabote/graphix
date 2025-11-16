@@ -27,7 +27,6 @@ namespace Graphix
                     Skin = skinIndex,
                     Baking = info.Baking,
                     JointMeta = info.Skin.JointMeta,
-                    Joint = info.Joint
                 });
             }
 

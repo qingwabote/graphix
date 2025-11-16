@@ -109,7 +109,7 @@ namespace Graphix
                             offset = store.Add();
                             unsafe
                             {
-                                sources[i] = new JointSource { Value = (long)store.Source, };
+                                sources[i] = new JointSource(store.Source);
                             }
 
                             if (info.Baking)
@@ -149,37 +149,45 @@ namespace Graphix
             {
                 foreach (var (skin, nodes, source, offset) in SystemAPI.Query<SkinInfo, DynamicBuffer<SkinNode>, RefRW<JointSource>, JointOffset>())
                 {
-                    if (source.ValueRO.Value == 0)
+                    unsafe
                     {
-                        continue;
-                    }
-
-                    var models = new NativeArray<float4x4>(nodes.Length + 1, Allocator.Temp);
-                    models[0] = float4x4.identity;
-                    for (int i = 0; i < nodes.Length; i++)
-                    {
-                        var node = nodes[i];
-                        models[i + 1] = math.mul(models[node.Parent + 1], SystemAPI.GetComponent<LocalTransform>(node.Target).ToMatrix());
+                        if (source.ValueRO.Value == null)
+                        {
+                            continue;
+                        }
                     }
 
                     ref var inverseBindMatrices = ref skin.JointMeta.Value.InverseBindMatrices;
                     ref var locations = ref skin.JointMeta.Value.Locations;
-                    unsafe
+                    var models = new NativeArray<float4x4>(nodes.Length + 1, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                    models[0] = float4x4.identity;
+                    for (int i = 0; i < nodes.Length; i++)
                     {
-                        var store = (NativeArray<float>*)source.ValueRO.Value;
-                        var matrices = (float4x3*)((float*)store->GetUnsafePtr() + (int)offset.Value);
-                        for (int i = 0; i < inverseBindMatrices.Length; i++)
-                        {
-                            var m = math.mul(models[i + skin.Joint + 1], inverseBindMatrices[i]);
+                        var node = nodes[i];
+                        var model = math.mul(models[node.Parent + 1], SystemAPI.GetComponent<LocalTransform>(node.Target).ToMatrix());
 
-                            float4x3* m4x3 = matrices + locations[i];
-                            m4x3->c0 = new float4(m.c0.x, m.c0.y, m.c0.z, m.c3.x);
-                            m4x3->c1 = new float4(m.c1.x, m.c1.y, m.c1.z, m.c3.y);
-                            m4x3->c2 = new float4(m.c2.x, m.c2.y, m.c2.z, m.c3.z);
+                        var location = locations[i];
+                        if (location > -1)
+                        {
+                            var matrix = math.mul(model, inverseBindMatrices[location]);
+                            unsafe
+                            {
+                                float4x3* matrices = (float4x3*)((float*)source.ValueRO.Value->GetUnsafePtr() + (int)offset.Value);
+                                matrices[location] = new float4x3(
+                                    new float4(matrix.c0.x, matrix.c0.y, matrix.c0.z, matrix.c3.x),
+                                    new float4(matrix.c1.x, matrix.c1.y, matrix.c1.z, matrix.c3.y),
+                                    new float4(matrix.c2.x, matrix.c2.y, matrix.c2.z, matrix.c3.z)
+                                );
+                            }
                         }
+
+                        models[i + 1] = model;
                     }
 
-                    source.ValueRW.Value = 0;
+                    unsafe
+                    {
+                        source.ValueRW.Value = null;
+                    }
                 }
             }
         }

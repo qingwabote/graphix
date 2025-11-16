@@ -64,7 +64,7 @@ namespace Graphix
         {
             get
             {
-                return m_Persistent ??= new Store(Joints.Length);
+                return m_Persistent ??= new Store(Nodes.Length);
             }
         }
 
@@ -73,12 +73,12 @@ namespace Graphix
         {
             get
             {
-                return m_Transient ??= new TransientStore(Joints.Length);
+                return m_Transient ??= new TransientStore(Nodes.Length);
             }
         }
 
         // [HideInInspector]
-        public string[] Joints;
+        public string[] Nodes;
 
         [SerializeField, HideInInspector]
         private byte[] m_JointMeta;

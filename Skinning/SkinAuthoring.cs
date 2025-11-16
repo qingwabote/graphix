@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Bastard;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
@@ -18,7 +19,6 @@ namespace Graphix
     {
         public Skin Skin;
         public bool Baking;
-        public int Joint;
     }
 
     public struct SkinInfo : IComponentData
@@ -26,7 +26,6 @@ namespace Graphix
         public int Skin;
         public bool Baking;
         public BlobAssetReference<JointMeta> JointMeta;
-        public int Joint;
     }
 
     public struct SkinNode : IBufferElementData
@@ -35,9 +34,20 @@ namespace Graphix
         public int Parent;
     }
 
-    public struct JointSource : IComponentData
+    public unsafe struct JointSource : IComponentData
     {
-        public long Value;
+        private long m_Value;
+
+        public NativeArray<float>* Value
+        {
+            get => (NativeArray<float>*)m_Value;
+            set => m_Value = (long)value;
+        }
+
+        public JointSource(NativeArray<float>* value)
+        {
+            m_Value = (long)value;
+        }
     }
 
     [MaterialProperty("_JointOffset")]
@@ -52,69 +62,41 @@ namespace Graphix
         {
             var entity = GetEntity(TransformUsageFlags.Dynamic);
 
-            var transforms = new List<Transform>();
+            var nodes = AddBuffer<SkinNode>(entity);
+            nodes.ResizeUninitialized(authoring.Skin.Nodes.Length);
+            for (int i = 0; i < nodes.Length; i++)
             {
-                var parent = authoring.transform;
-
-                // assume Joints[0] is root joint
-                var root = authoring.Skin.Joints[0];
-                var path = root.Split("/");
-                // add parents of root joint if any
-                for (int i = 0; i < path.Length - 1; i++)
-                {
-                    var name = path[i];
-                    var err = true;
-                    for (int j = 0; j < parent.childCount; j++)
-                    {
-                        var child = parent.GetChild(j);
-                        if (child.name == name)
-                        {
-                            transforms.Add(child);
-                            parent = child;
-                            err = false;
-                            break;
-                        }
-                    }
-                    if (err)
-                    {
-                        throw new Exception($"{name} not exists");
-                    }
-                }
-            }
-            var JointStart = transforms.Count;
-            foreach (var path in authoring.Skin.Joints)
-            {
+                var path = authoring.Skin.Nodes[i];
                 var target = authoring.transform.GetChildByPath(path);
                 if (!target)
                 {
                     throw new Exception($"{path} not exists");
                 }
-                transforms.Add(target);
-            }
-
-            var nodes = AddBuffer<SkinNode>(entity);
-            for (int i = 0; i < transforms.Count; i++)
-            {
-                var child = transforms[i];
-                var parent = i - 1;
-                for (; parent > -1; parent--)
+                int parent = -1;
                 {
-                    if (transforms[parent] == child.parent)
+                    int index = path.LastIndexOf('/');
+                    if (index > -1)
                     {
-                        break;
+                        var p = path.Substring(0, index);
+                        for (parent = i - 1; parent > -1; parent--)
+                        {
+                            if (authoring.Skin.Nodes[parent] == p)
+                            {
+                                break;
+                            }
+                        }
                     }
                 }
-                nodes.Add(new SkinNode
+                nodes[i] = new SkinNode
                 {
-                    Target = GetEntity(child, TransformUsageFlags.Dynamic),
+                    Target = GetEntity(target, TransformUsageFlags.Dynamic),
                     Parent = parent
-                });
+                };
             }
             AddComponentObject(entity, new SkinInfoBaking
             {
                 Skin = authoring.Skin,
                 Baking = authoring.Baking,
-                Joint = JointStart,
             });
             AddComponent<JointSource>(entity);
             AddComponent<JointOffset>(entity);

@@ -189,32 +189,70 @@ namespace Graphix
                 var skin = ScriptableObject.CreateInstance<Skin>();
                 skin.name = "Skin_0";
 
-                var joints = new (string Path, int Index)[skinnedRenderer.bones.Length];
-                for (int i = 0; i < joints.Length; i++)
+                List<(string Path, int Location)> nodes = new();
                 {
-                    joints[i].Path = skinnedRenderer.bones[i].transform.RelativePath(gameObject.transform);
-                    joints[i].Index = i;
-                }
-                Array.Sort(joints, (a, b) =>
-                {
-                    return string.Compare(a.Path, b.Path, StringComparison.Ordinal);
-                });
-                skin.Joints = joints.Select(x => x.Path).ToArray();
-                {
-                    var bindposes = skinnedRenderer.sharedMesh.GetBindposes();
-
-                    var builder = new BlobBuilder(Allocator.Temp);
-                    ref var meta = ref builder.ConstructRoot<JointMeta>();
-                    var inverseBindMatrices = builder.Allocate(ref meta.InverseBindMatrices, joints.Length);
-                    var Locations = builder.Allocate(ref meta.Locations, joints.Length);
+                    var joints = new (string Path, int Location)[skinnedRenderer.bones.Length];
                     for (int i = 0; i < joints.Length; i++)
                     {
-                        inverseBindMatrices[i] = bindposes[joints[i].Index];
-                        Locations[i] = joints[i].Index;
+                        joints[i].Path = skinnedRenderer.bones[i].transform.RelativePath(gameObject.transform);
+                        joints[i].Location = i;
                     }
-
-                    skin.JointMeta = builder.CreateBlobAssetReference<JointMeta>(Allocator.Persistent);
+                    Array.Sort(joints, (a, b) =>
+                    {
+                        return string.Compare(a.Path, b.Path, StringComparison.Ordinal);
+                    });
+                    foreach (var joint in joints)
+                    {
+                        var path = joint.Path;
+                        List<string> parents = new();
+                        while (true)
+                        {
+                            int index = path.LastIndexOf('/');
+                            if (index < 0)
+                            {
+                                break;
+                            }
+                            var parent = path.Substring(0, index);
+                            int i = nodes.Count - 1;
+                            for (; i > -1; i--)
+                            {
+                                if (nodes[i].Path == parent)
+                                {
+                                    break;
+                                }
+                            }
+                            if (i > -1)
+                            {
+                                break;
+                            }
+                            parents.Add(parent);
+                            path = parent;
+                        }
+                        for (int i = parents.Count - 1; i > -1; i--)
+                        {
+                            nodes.Add(new(parents[i], -1));
+                        }
+                        nodes.Add(joint);
+                    }
+                    skin.Nodes = nodes.Select(x => x.Path).ToArray();
                 }
+
+                var bindposes = skinnedRenderer.sharedMesh.GetBindposes();
+
+                var builder = new BlobBuilder(Allocator.Temp);
+                ref var meta = ref builder.ConstructRoot<JointMeta>();
+                var inverseBindMatrices = builder.Allocate(ref meta.InverseBindMatrices, bindposes.Length);
+                unsafe
+                {
+                    UnsafeUtility.MemCpy(inverseBindMatrices.GetUnsafePtr(), bindposes.GetUnsafeReadOnlyPtr(), UnsafeUtility.SizeOf<float4x4>() * inverseBindMatrices.Length);
+                }
+                var Locations = builder.Allocate(ref meta.Locations, nodes.Count);
+                for (int i = 0; i < Locations.Length; i++)
+                {
+                    Locations[i] = nodes[i].Location;
+                }
+                skin.JointMeta = builder.CreateBlobAssetReference<JointMeta>(Allocator.Persistent);
+
 
                 var skinAuthoring = gameObject.AddComponent<SkinAuthoring>();
                 skinAuthoring.Skin = skin;
