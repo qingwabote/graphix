@@ -155,25 +155,30 @@ namespace Graphix
             ref Clip clip = ref builder.ConstructRoot<Clip>();
             BlobBuilderArray<Channel> channels = builder.Allocate(ref clip.Channels, curveGroups.Count);
             var nodes = new string[curveGroups.Count];
-            for (int curveGroupIndex = 0; curveGroupIndex < curveGroups.Count; curveGroupIndex++)
+            int outputs = 0;
+            for (int groupIndex = 0; groupIndex < curveGroups.Count; groupIndex++)
             {
-                var curveGroup = curveGroups[curveGroupIndex];
-                nodes[curveGroupIndex] = curveGroup.Node;
-
-                ref var channel = ref channels[curveGroupIndex];
-                BlobBuilderArray<float> input = builder.Allocate(ref channel.Input, curveGroup.KeyCount);
-                curveGroup.GetKeyTimes(ref input);
-                var components = curveGroup.Components.Length;
-                BlobBuilderArray<float> output = builder.Allocate(ref channel.Output, curveGroup.KeyCount * components);
-                for (int keyIndex = 0; keyIndex < curveGroup.KeyCount; keyIndex++)
+                var group = curveGroups[groupIndex];
+                ref var channel = ref channels[groupIndex];
+                BlobBuilderArray<float> input = builder.Allocate(ref channel.Input, group.KeyCount);
+                group.GetKeyTimes(ref input);
+                var components = group.Components.Length;
+                BlobBuilderArray<float> output = builder.Allocate(ref channel.Output, group.KeyCount * components);
+                for (int keyIndex = 0; keyIndex < group.KeyCount; keyIndex++)
                 {
                     for (int i = 0; i < components; i++)
                     {
-                        output[keyIndex * components + i] = curveGroup.Components[i][keyIndex].value;
+                        output[keyIndex * components + i] = group.Components[i][keyIndex].value;
                     }
                 }
-                channel.Path = curveGroup.Path;
+                channel.Path = group.Path;
+
+                nodes[groupIndex] = group.Node;
+                outputs += components;
             }
+            clip.Duration = goClip.length;
+            clip.Outputs = outputs;
+
             var animationClip = ScriptableObject.CreateInstance<AnimationClip>();
             animationClip.name = goClip.name;
             animationClip.Nodes = nodes;

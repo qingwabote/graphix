@@ -14,11 +14,11 @@ namespace Graphix
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            foreach (var (animation, clipBingings) in SystemAPI.Query<RefRW<AnimationState>, DynamicBuffer<ClipBinging>>())
+            foreach (var (animation, bingings) in SystemAPI.Query<RefRW<AnimationState>, DynamicBuffer<ClipBinging>>())
             {
-                ref var clipBinging = ref clipBingings.ElementAt(animation.ValueRO.Index);
-                var time = animation.ValueRW.Time;
-                var duration = clipBinging.Duration;
+                ref var binging = ref bingings.ElementAt(animation.ValueRO.Index);
+                var duration = binging.Blob.Value.Duration;
+                var time = animation.ValueRO.Time;
 
                 if (time < duration)
                 {

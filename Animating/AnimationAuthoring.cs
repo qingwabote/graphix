@@ -14,9 +14,7 @@ namespace Graphix
     public struct ClipBinging : IBufferElementData
     {
         public BlobAssetReference<Clip> Blob;
-        public float Duration;
         public int TargetIndex;
-        public int Outputs;
     }
 
     class AnimationAuthoring : MonoBehaviour
@@ -49,52 +47,18 @@ namespace Graphix
             }
 
             var entity = GetEntity(TransformUsageFlags.Dynamic);
-            var channelTargets = AddBuffer<ChannelTarget>(entity);
-            var clipBindings = AddBuffer<ClipBinging>(entity);
+            var targets = AddBuffer<ChannelTarget>(entity);
+            var bindings = AddBuffer<ClipBinging>(entity);
             foreach (var clip in authoring.Clips)
             {
-                ref BlobArray<Channel> channels = ref clip.Blob.Value.Channels;
-                float duration = 0;
-                int outputs = 0;
-                for (int i = 0; i < channels.Length; i++)
-                {
-                    ref var channel = ref channels[i];
-                    duration = math.max(duration, channel.Input[^1]);
-                    switch (channel.Path)
-                    {
-                        case ChannelPath.TRANSLATION:
-                            outputs += 3;
-                            break;
-                        case ChannelPath.ROTATION:
-                            outputs += 4;
-                            break;
-                        case ChannelPath.SCALE:
-                            outputs += 3;
-                            break;
-                        default:
-                            throw new Exception($"unsupported path: {channel.Path}");
-                    }
-                }
-
-                clipBindings.Add(new ClipBinging
-                {
-                    Blob = clip.Blob,
-                    Duration = duration,
-                    TargetIndex = channelTargets.Length,
-                    Outputs = outputs
-                });
-
+                bindings.Add(new ClipBinging { Blob = clip.Blob, TargetIndex = targets.Length });
                 foreach (var path in clip.Nodes)
                 {
-                    var target = authoring.transform.GetChildByPath(path);
-                    channelTargets.Add(new ChannelTarget { Value = GetEntity(target, TransformUsageFlags.None) });
+                    targets.Add(new ChannelTarget { Value = GetEntity(authoring.transform.GetChildByPath(path), TransformUsageFlags.None) });
                 }
             }
 
-            AddComponent(entity, new AnimationState
-            {
-                Index = authoring.Index
-            });
+            AddComponent(entity, new AnimationState { Index = authoring.Index });
         }
     }
 }

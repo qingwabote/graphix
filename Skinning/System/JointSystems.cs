@@ -97,8 +97,9 @@ namespace Graphix
                             {
                                 var anim = animations[i];
                                 var clip = clips[i][anim.Index];
-                                var ratio = anim.Time / clip.Duration;
-                                var frame = (int)math.ceil(ratio * (clip.Duration * 60 - 1));
+                                var duration = clip.Blob.Value.Duration;
+                                var ratio = anim.Time / duration;
+                                var frame = (int)math.ceil(ratio * (duration * 60 - 1));
                                 key = new ClipFrame(info.Skin, clip.Blob, frame);
                             }
                             baked = s_ClipFrameOffsets.TryGetValue(key, out offset);

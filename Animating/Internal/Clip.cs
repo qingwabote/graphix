@@ -110,6 +110,10 @@ namespace Graphix
     {
         public BlobArray<Channel> Channels;
 
+        public float Duration;
+
+        public int Outputs;
+
         public unsafe void Sample(float* output, float time)
         {
             for (int i = 0; i < Channels.Length; i++)
