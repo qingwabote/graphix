@@ -4,6 +4,7 @@ using Bastard;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
+using Unity.Transforms;
 using UnityEngine;
 
 namespace Graphix
@@ -32,6 +33,12 @@ namespace Graphix
     {
         public Entity Target;
         public int Parent;
+    }
+
+    [TemporaryBakingType]
+    public struct TransformBaking : IBufferElementData
+    {
+        public LocalTransform Value;
     }
 
     public unsafe struct JointSource : IComponentData
@@ -64,6 +71,8 @@ namespace Graphix
 
             var nodes = AddBuffer<SkinNode>(entity);
             nodes.ResizeUninitialized(authoring.Skin.Nodes.Length);
+            var tansforms = AddBuffer<TransformBaking>(entity);
+            tansforms.ResizeUninitialized(authoring.Skin.Nodes.Length);
             for (int i = 0; i < nodes.Length; i++)
             {
                 var path = authoring.Skin.Nodes[i];
@@ -89,9 +98,10 @@ namespace Graphix
                 }
                 nodes[i] = new SkinNode
                 {
-                    Target = GetEntity(target, TransformUsageFlags.Dynamic),
+                    Target = GetEntity(target, TransformUsageFlags.None),
                     Parent = parent
                 };
+                tansforms[i] = new TransformBaking { Value = LocalTransform.FromPositionRotationScale(target.localPosition, target.localRotation, target.localScale.x) };
             }
             AddComponentObject(entity, new SkinInfoBaking
             {

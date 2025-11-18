@@ -87,7 +87,7 @@ namespace Graphix
                 foreach (var path in clip.Nodes)
                 {
                     var target = authoring.transform.GetChildByPath(path);
-                    channelTargets.Add(new ChannelTarget { Value = GetEntity(target, TransformUsageFlags.Dynamic) });
+                    channelTargets.Add(new ChannelTarget { Value = GetEntity(target, TransformUsageFlags.None) });
                 }
             }
 
