@@ -1,7 +1,5 @@
-using System;
 using Bastard;
 using Unity.Entities;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace Graphix
@@ -54,6 +52,7 @@ namespace Graphix
                 bindings.Add(new ClipBinging { Blob = clip.Blob, TargetIndex = targets.Length });
                 foreach (var path in clip.Nodes)
                 {
+                    // Why use TransformUsageFlags.None, see TargetStripper
                     targets.Add(new ChannelTarget { Value = GetEntity(authoring.transform.GetChildByPath(path), TransformUsageFlags.None) });
                 }
             }

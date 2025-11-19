@@ -4,7 +4,8 @@ using Unity.Entities;
 using Unity.Transforms;
 
 [WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
-public partial struct TargetTransformBaker : ISystem
+[UpdateInGroup(typeof(PostBakingSystemGroup))]
+public partial struct TargetStripper : ISystem
 {
     public void OnUpdate(ref SystemState state)
     {
@@ -13,12 +14,11 @@ public partial struct TargetTransformBaker : ISystem
         {
             for (int i = 0; i < nodes.Length; i++)
             {
-                var entity = nodes[i].Value;
-                if (SystemAPI.HasComponent<LocalTransform>(entity))
+                ref var target = ref nodes.ElementAt(i);
+                if (!SystemAPI.HasComponent<LocalTransform>(target.Value))
                 {
-                    continue;
+                    target.Value = Entity.Null;
                 }
-                ecb.AddComponent<LocalTransform>(entity);
             }
         }
         ecb.Playback(state.EntityManager);
