@@ -155,7 +155,6 @@ namespace Graphix
             ref Clip clip = ref builder.ConstructRoot<Clip>();
             BlobBuilderArray<Channel> channels = builder.Allocate(ref clip.Channels, curveGroups.Count);
             var nodes = new string[curveGroups.Count];
-            int outputs = 0;
             for (int groupIndex = 0; groupIndex < curveGroups.Count; groupIndex++)
             {
                 var group = curveGroups[groupIndex];
@@ -174,10 +173,8 @@ namespace Graphix
                 channel.Path = group.Path;
 
                 nodes[groupIndex] = group.Node;
-                outputs += components;
             }
             clip.Duration = goClip.length;
-            clip.Outputs = outputs;
 
             var animationClip = ScriptableObject.CreateInstance<AnimationClip>();
             animationClip.name = goClip.name;

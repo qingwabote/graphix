@@ -54,12 +54,14 @@ namespace Graphix
             return ~head;
         }
 
-        public unsafe void Vec3(float3* output, float3* channel_output, float time)
+        public unsafe float3 Vec3(float time)
         {
+            float3* output = (float3*)Output.GetUnsafePtr();
+
             int index = Seek(time);
             if (index >= 0)
             {
-                *output = *(channel_output + index);
+                return *(output + index);
             }
             else
             {
@@ -67,16 +69,18 @@ namespace Graphix
                 int prev = next - 1;
 
                 float t = (time - Input[prev]) / (Input[next] - Input[prev]);
-                *output = math.lerp(*(channel_output + prev), *(channel_output + next), t);
+                return math.lerp(*(output + prev), *(output + next), t);
             }
         }
 
-        public unsafe void Quat(quaternion* output, quaternion* channel_output, float time)
+        public unsafe quaternion Quat(float time)
         {
+            quaternion* output = (quaternion*)Output.GetUnsafePtr();
+
             int index = Seek(time);
             if (index >= 0)
             {
-                *output = *(channel_output + index);
+                return *(output + index);
             }
             else
             {
@@ -84,24 +88,7 @@ namespace Graphix
                 int prev = next - 1;
 
                 float t = (time - Input[prev]) / (Input[next] - Input[prev]);
-                *output = math.slerp(*(channel_output + prev), *(channel_output + next), t);
-            }
-        }
-
-        public unsafe int Sample(float* output, float time)
-        {
-            switch (Path)
-            {
-                case ChannelPath.TRANSLATION:
-                case ChannelPath.SCALE:
-                    Vec3((float3*)output, (float3*)this.Output.GetUnsafePtr(), time);
-                    return 3;
-                case ChannelPath.ROTATION:
-                    Quat((quaternion*)output, (quaternion*)this.Output.GetUnsafePtr(), time);
-                    return 4;
-
-                default:
-                    throw new Exception($"unsupported channel path: {Path}");
+                return math.slerp(*(output + prev), *(output + next), t);
             }
         }
     }
@@ -109,17 +96,6 @@ namespace Graphix
     public struct Clip
     {
         public BlobArray<Channel> Channels;
-
         public float Duration;
-
-        public int Outputs;
-
-        public unsafe void Sample(float* output, float time)
-        {
-            for (int i = 0; i < Channels.Length; i++)
-            {
-                output += Channels[i].Sample(output, time);
-            }
-        }
     }
 }
