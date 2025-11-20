@@ -117,7 +117,7 @@ namespace Graphix
             var renderers = GetComponentsInChildren<SkinnedMeshRenderer>();
             foreach (var renderer in renderers)
             {
-                materails.Add(renderer.GetComponent<SkinnedMeshRendererAuthoring>().Material);
+                materails.Add(renderer.sharedMaterial);
                 meshes.Add(renderer.sharedMesh);
             }
             AddComponentObject(entity, new MaterialMeshArrayBaking

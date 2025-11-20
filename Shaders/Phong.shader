@@ -100,7 +100,10 @@ Shader "Graphix/Phong"
 
                 float3 positionOS = input.positionOS.xyz;
                 #if defined(_SKINNING_ON)
-                SkinningDeform(positionOS, input.normalOS, input.indices, input.weights, _JointMap, _JointMap_TexelSize.z, UNITY_ACCESS_INSTANCED_PROP(PerInstance, _JointOffset));
+                // exclude from editor
+                if (_JointMap_TexelSize.z > 0) {
+                    SkinningDeform(positionOS, input.normalOS, input.indices, input.weights, _JointMap, _JointMap_TexelSize.z, UNITY_ACCESS_INSTANCED_PROP(PerInstance, _JointOffset));
+                }
                 #endif
                 float3 positionWS = TransformObjectToWorld(positionOS);
 

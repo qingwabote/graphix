@@ -148,6 +148,7 @@ namespace Graphix
 
             using (new Profile.Scope(m_ProfileEntry))
             {
+                var models = new NativeList<float4x4>(Allocator.Temp);
                 foreach (var (skin, nodes, source, offset) in SystemAPI.Query<SkinInfo, DynamicBuffer<SkinNode>, RefRW<JointSource>, JointOffset>())
                 {
                     unsafe
@@ -157,11 +158,10 @@ namespace Graphix
                             continue;
                         }
                     }
-
+                    models.Resize(nodes.Length + 1, NativeArrayOptions.UninitializedMemory);
+                    models[0] = float4x4.identity;
                     ref var inverseBindMatrices = ref skin.JointMeta.Value.InverseBindMatrices;
                     ref var locations = ref skin.JointMeta.Value.Locations;
-                    var models = new NativeArray<float4x4>(nodes.Length + 1, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-                    models[0] = float4x4.identity;
                     for (int i = 0; i < nodes.Length; i++)
                     {
                         var node = nodes[i];

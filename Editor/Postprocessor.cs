@@ -271,14 +271,14 @@ namespace Graphix
                             enableInstancing = true
                         };
                         material.SetFloat("_SKINNING", 1);
+                        material.name += "X";
                         materials.Add(renderer.sharedMaterial, material);
 
-                        context.AddObjectToAsset($"Graphix_{material.name}", material);
+                        context.AddObjectToAsset(material.name, material);
                     }
-                    var authoring = renderer.gameObject.AddComponent<SkinnedMeshRendererAuthoring>();
-                    authoring.Material = material;
+                    renderer.sharedMaterial = material;
                 }
-                context.AddObjectToAsset($"Graphix_{skin.name}", skin);
+                context.AddObjectToAsset(skin.name, skin);
             }
         }
     }
