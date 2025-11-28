@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace Graphix
 {
+    [UpdateInGroup(typeof(BatchGroup))]
     public partial struct SkinnedBatcher : ISystem
     {
         private struct SkinnedBatchKey : IEquatable<SkinnedBatchKey>

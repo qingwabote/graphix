@@ -6,6 +6,7 @@ using Unity.Transforms;
 
 namespace Graphix
 {
+    [UpdateInGroup(typeof(BatchGroup))]
     public partial struct Batcher : ISystem
     {
         static private BatcherImpl<MaterialMeshInfo, BatchSorter, NoParam> s_Batcher = new();
