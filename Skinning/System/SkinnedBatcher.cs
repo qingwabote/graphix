@@ -80,7 +80,7 @@ namespace Graphix
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
-                s_Batcher.Sorter.SkinArray = SkinArray.GetInstance(ref state);
+                s_Batcher.Sorter.SkinArray = SkinArray.GetCurrent(state.EntityManager);
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshElement>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     s_Batcher.BeginChunk(ref state, chunk);

@@ -71,16 +71,12 @@ namespace Graphix
                 }
             }
 
-            MaterialMeshArray materialMeshArray = new()
-            {
-                Materials = materials.ToArray(),
-                Meshes = meshes.ToArray(),
-                HashCode = 666
-            };
+            List<SceneSection> scenes = new();
+            state.EntityManager.GetAllUniqueSharedComponentsManaged(scenes);
 
             ecb.AddSharedComponentManaged(
                 SystemAPI.QueryBuilder().WithAny<MaterialMeshBaking, MaterialMeshArrayBaking>().WithOptions(EntityQueryOptions.IncludePrefab).Build(),
-                materialMeshArray,
+                new MaterialMeshArray(materials.ToArray(), meshes.ToArray(), scenes[1].SceneGUID.GetHashCode()),
                 EntityQueryCaptureMode.AtPlayback
             );
 

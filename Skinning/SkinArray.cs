@@ -7,24 +7,24 @@ namespace Graphix
 {
     public struct SkinArray : ISharedComponentData, IEquatable<SkinArray>
     {
-        static private SkinArray s_Instance;
+        static private List<SkinArray> s_Instances = new();
 
-        static public SkinArray GetInstance(ref SystemState state)
+        static public SkinArray GetCurrent(EntityManager entityManager)
         {
-            if (s_Instance.HashCode != 0)
-            {
-                return s_Instance;
-            }
-
-            List<SkinArray> list = new();
-            state.EntityManager.GetAllUniqueSharedComponentsManaged(list);
-            s_Instance = list[1]; // 0 is always default
-            return s_Instance;
+            s_Instances.Clear();
+            entityManager.GetAllUniqueSharedComponentsManaged(s_Instances);
+            return s_Instances[1];
         }
 
         public Skin[] Data;
 
-        public int HashCode;
+        private int m_HashCode;
+
+        internal SkinArray(Skin[] data, int hashCode)
+        {
+            Data = data;
+            m_HashCode = hashCode;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Skin.Store GetCurrentStore(SkinInfo info)
@@ -34,12 +34,12 @@ namespace Graphix
 
         public override int GetHashCode()
         {
-            return HashCode;
+            return m_HashCode;
         }
 
         public bool Equals(SkinArray other)
         {
-            return HashCode == other.HashCode;
+            return m_HashCode == other.m_HashCode;
         }
     }
 }

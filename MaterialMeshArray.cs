@@ -7,34 +7,35 @@ namespace Graphix
 {
     public struct MaterialMeshArray : ISharedComponentData, IEquatable<MaterialMeshArray>
     {
-        static private MaterialMeshArray s_Instance;
+        static private List<MaterialMeshArray> s_Instances = new();
 
-        static public MaterialMeshArray GetInstance(EntityManager entityManager)
+        static public MaterialMeshArray GetCurrent(EntityManager entityManager)
         {
-            if (s_Instance.HashCode != 0)
-            {
-                return s_Instance;
-            }
-
-            List<MaterialMeshArray> list = new();
-            entityManager.GetAllUniqueSharedComponentsManaged(list);
-            s_Instance = list[1]; // 0 is always default
-            return s_Instance;
+            s_Instances.Clear();
+            entityManager.GetAllUniqueSharedComponentsManaged(s_Instances);
+            return s_Instances[1];
         }
 
         public Material[] Materials;
         public Mesh[] Meshes;
 
-        public int HashCode;
+        private int m_HashCode;
+
+        internal MaterialMeshArray(Material[] materials, Mesh[] meshes, int hashCode)
+        {
+            Materials = materials;
+            Meshes = meshes;
+            m_HashCode = hashCode;
+        }
 
         public override int GetHashCode()
         {
-            return HashCode;
+            return m_HashCode;
         }
 
         public bool Equals(MaterialMeshArray other)
         {
-            return HashCode == other.HashCode;
+            return m_HashCode == other.m_HashCode;
         }
     }
 }

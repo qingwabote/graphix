@@ -67,7 +67,7 @@ namespace Graphix
                 var ChannelTarget = SystemAPI.GetBufferTypeHandle<ChannelTarget>(false);
                 ChannelTarget.Update(ref state);
 
-                var skinArray = SkinArray.GetInstance(ref state);
+                var skinArray = SkinArray.GetCurrent(state.EntityManager);
 
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<SkinInfo>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
@@ -214,7 +214,7 @@ namespace Graphix
 
             using (new Profile.Scope(m_ProfileEntry))
             {
-                var skinArray = SkinArray.GetInstance(ref state);
+                var skinArray = SkinArray.GetCurrent(state.EntityManager);
                 foreach (var info in SystemAPI.Query<SkinInfo>())
                 {
                     skinArray.GetCurrentStore(info).Update();
