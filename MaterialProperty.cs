@@ -17,6 +17,8 @@ namespace Graphix
             }
         }
 
+        static public readonly int MaxCount = 32;
+
         static public DynamicComponentTypeHandle[] Handles;
 
         // use TypeIndex of ComponentType as key, ignore AccessModeType
@@ -39,6 +41,7 @@ namespace Graphix
                 if (s_TypeToProperty.ContainsKey(type.TypeIndex))
                     count++;
             }
+            Debug.Assert(count <= MaxCount);
 
             UnsafeList<MaterialProperty> properties = new(count, Allocator.Persistent);
             foreach (var type in types)

@@ -9,8 +9,6 @@ namespace Graphix
     [UpdateInGroup(typeof(BatchGroup))]
     public partial struct Batcher : ISystem
     {
-        static private BatcherImpl<MaterialMeshInfo, BatchSorter, NoParam> s_Batcher = new();
-
         private int m_BatchEntry;
 
         public void OnCreate(ref SystemState state)
@@ -34,19 +32,19 @@ namespace Graphix
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
+                var batcher = new BatcherImpl<MaterialMeshInfo, BatchProgram>(128);
                 // make MaterialMeshInfo RW for WriteGroup
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAllRW<MaterialMeshInfo>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
-                    s_Batcher.BeginChunk(ref state, chunk);
+                    batcher.BeginChunk(ref state, chunk);
                     var mms = chunk.GetNativeArray(ref MaterialMesh);
                     var worlds = chunk.GetNativeArray(ref LocalToWorld);
                     for (int i = 0; i < chunk.Count; i++)
                     {
-                        s_Batcher.Add(i, worlds.ElementAtRO(i).Value, mms[i]);
+                        batcher.Add(i, worlds.ElementAtRO(i).Value, mms[i]);
                     }
-                    s_Batcher.EndChunk();
+                    batcher.EndChunk();
                 }
-                s_Batcher.Clear();
             }
         }
     }

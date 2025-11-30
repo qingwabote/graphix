@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
@@ -8,31 +7,25 @@ using Unity.Rendering;
 
 namespace Graphix
 {
-    public struct NoParam { }
-
-    public interface IBatchSorter<TKey, TParam>
+    public interface IBatchProgram<TKey>
     {
-        TKey KeyGen(MaterialMeshInfo mm, TParam param);
-        void BatchInit(Batch batch, MaterialMeshInfo mm, TParam param);
+        TKey KeyGen(int entity, MaterialMeshInfo mm);
+        void OnBatch(int entity, Batch batch);
     }
 
-    public struct BatchSorter : IBatchSorter<MaterialMeshInfo, NoParam>
+    public struct BatchProgram : IBatchProgram<MaterialMeshInfo>
     {
-        public MaterialMeshInfo KeyGen(MaterialMeshInfo mm, NoParam param)
+        public MaterialMeshInfo KeyGen(int entity, MaterialMeshInfo mm)
         {
             return mm;
         }
 
-        public void BatchInit(Batch batch, MaterialMeshInfo mm, NoParam param)
-        {
-            batch.Material = mm.Material;
-            batch.Mesh = mm.Mesh;
-        }
+        public void OnBatch(int entity, Batch batch) { }
     }
 
-    public unsafe class BatcherImpl<TKey, TSorter, TParam> where TKey : unmanaged, IEquatable<TKey> where TSorter : IBatchSorter<TKey, TParam>
+    public unsafe ref struct BatcherImpl<TKey, TProgram> where TKey : unmanaged, IEquatable<TKey> where TProgram : IBatchProgram<TKey>
     {
-        struct KeyWithProperty : IEquatable<KeyWithProperty>
+        struct BatchKey : IEquatable<BatchKey>
         {
             public TKey Key;
             public UnsafeList<MaterialProperty>.ReadOnly Properties;
@@ -50,7 +43,7 @@ namespace Graphix
                 }
             }
 
-            public bool Equals(KeyWithProperty other)
+            public bool Equals(BatchKey other)
             {
                 if (!Key.Equals(other.Key))
                 {
@@ -71,17 +64,22 @@ namespace Graphix
             }
         }
 
-        private readonly Dictionary<KeyWithProperty, int> m_Cache = new();
-
-        public TSorter Sorter = default;
+        private NativeHashMap<BatchKey, int> m_Cache;
 
         private UnsafeList<MaterialProperty>.ReadOnly m_Properties;
-        private void** m_PropertyData = null;
+        private void** m_PropertyData;
+
+        public BatcherImpl(int initialCapacity)
+        {
+            m_Cache = new(initialCapacity, Allocator.Temp);
+
+            m_Properties = default;
+            m_PropertyData = (void**)UnsafeUtility.Malloc(sizeof(void*) * MaterialProperty.MaxCount, UnsafeUtility.AlignOf<IntPtr>(), Allocator.Temp);
+        }
 
         public void BeginChunk(ref SystemState state, ArchetypeChunk chunk)
         {
             m_Properties = MaterialProperty.Get(chunk.Archetype);
-            m_PropertyData = (void**)UnsafeUtility.Malloc(sizeof(void*) * m_Properties.Length, UnsafeUtility.AlignOf<IntPtr>(), Allocator.Temp);
             for (int i = 0; i < m_Properties.Length; i++)
             {
                 var property = m_Properties.Ptr[i];
@@ -91,12 +89,18 @@ namespace Graphix
             }
         }
 
-        public void Add(int entity, in float4x4 world, MaterialMeshInfo mm, TParam param = default)
+        public void Add(int entity, in float4x4 world, MaterialMeshInfo mm)
+        {
+            TProgram program = default;
+            Add(entity, world, mm, ref program);
+        }
+
+        public void Add(int entity, in float4x4 world, MaterialMeshInfo mm, ref TProgram program)
         {
             Batch batch;
-            KeyWithProperty key = new()
+            BatchKey key = new()
             {
-                Key = Sorter.KeyGen(mm, param),
+                Key = program.KeyGen(entity, mm),
                 Properties = m_Properties
             };
             if (m_Cache.TryGetValue(key, out int index))
@@ -107,7 +111,8 @@ namespace Graphix
             {
                 m_Cache.Add(key, EntitiesGraphicsSystem.Queue.Count);
                 batch = EntitiesGraphicsSystem.Queue.Push();
-                Sorter.BatchInit(batch, mm, param);
+                batch.Material = mm.Material;
+                batch.Mesh = mm.Mesh;
 
                 for (int i = 0; i < m_Properties.Length; i++)
                 {
@@ -121,6 +126,8 @@ namespace Graphix
                         batch.PropertyVectorAcquire(property.Name);
                     }
                 }
+
+                program.OnBatch(entity, batch);
             }
 
             for (int i = 0; i < m_Properties.Length; i++)
@@ -140,15 +147,6 @@ namespace Graphix
             batch.LocalToWorlds.Add(world);
         }
 
-        public void EndChunk()
-        {
-            m_Properties = default;
-            m_PropertyData = null;
-        }
-
-        public void Clear()
-        {
-            m_Cache.Clear();
-        }
+        public void EndChunk() { }
     }
 }
