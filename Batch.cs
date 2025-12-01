@@ -30,33 +30,33 @@ namespace Graphix
             m_Textures.Add(name, texture);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void PropertyFloatAcquire(int name)
-        {
-            var list = s_FloatPool.Get();
-            list.Clear();
-            m_Floats.Add(name, list);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void PropertyFloatAdd(int name, float value)
         {
-            m_Floats.TryGetValue(name, out var list);
+            if (!m_Floats.TryGetValue(name, out var list))
+            {
+                list = s_FloatPool.Get();
+                list.Clear();
+                m_Floats.Add(name, list);
+            }
+            for (int i = list.Count; i < Count; i++)
+            {
+                list.Add(default);
+            }
             list.Add(value);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void PropertyVectorAcquire(int name)
-        {
-            var list = s_VectorPool.Get();
-            list.Clear();
-            m_Vectors.Add(name, list);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void PropertyVectorAdd(int name, Vector4 value)
         {
-            m_Vectors.TryGetValue(name, out var list);
+            if (!m_Vectors.TryGetValue(name, out var list))
+            {
+                list = s_VectorPool.Get();
+                list.Clear();
+                m_Vectors.Add(name, list);
+            }
+            for (int i = list.Count; i < Count; i++)
+            {
+                list.Add(default);
+            }
             list.Add(value);
         }
 

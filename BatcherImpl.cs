@@ -25,46 +25,7 @@ namespace Graphix
 
     public unsafe ref struct BatcherImpl<TKey, TProgram> where TKey : unmanaged, IEquatable<TKey> where TProgram : IBatchProgram<TKey>
     {
-        struct BatchKey : IEquatable<BatchKey>
-        {
-            public TKey Key;
-            public UnsafeList<MaterialProperty>.ReadOnly Properties;
-
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    int hash = Key.GetHashCode();
-                    for (int i = 0; i < Properties.Length; i++)
-                    {
-                        hash = hash * 31 + Properties.Ptr[i].Name;
-                    }
-                    return hash;
-                }
-            }
-
-            public bool Equals(BatchKey other)
-            {
-                if (!Key.Equals(other.Key))
-                {
-                    return false;
-                }
-                if (Properties.Length != other.Properties.Length)
-                {
-                    return false;
-                }
-                for (int i = 0; i < Properties.Length; i++)
-                {
-                    if (Properties.Ptr[i].Name != other.Properties.Ptr[i].Name)
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-        private NativeHashMap<BatchKey, int> m_Cache;
+        private NativeHashMap<TKey, int> m_Cache;
 
         private UnsafeList<MaterialProperty>.ReadOnly m_Properties;
         private void** m_PropertyData;
@@ -98,11 +59,7 @@ namespace Graphix
         public void Add(int entity, in float4x4 world, MaterialMeshInfo mm, ref TProgram program)
         {
             Batch batch;
-            BatchKey key = new()
-            {
-                Key = program.KeyGen(entity, mm),
-                Properties = m_Properties
-            };
+            var key = program.KeyGen(entity, mm);
             if (m_Cache.TryGetValue(key, out int index))
             {
                 batch = EntitiesGraphicsSystem.Queue.Data[index];
@@ -113,20 +70,6 @@ namespace Graphix
                 batch = EntitiesGraphicsSystem.Queue.Push();
                 batch.Material = mm.Material;
                 batch.Mesh = mm.Mesh;
-
-                for (int i = 0; i < m_Properties.Length; i++)
-                {
-                    var property = m_Properties.Ptr[i];
-                    if (property.Size == sizeof(float))
-                    {
-                        batch.PropertyFloatAcquire(property.Name);
-                    }
-                    else
-                    {
-                        batch.PropertyVectorAcquire(property.Name);
-                    }
-                }
-
                 program.OnBatch(entity, batch);
             }
 
