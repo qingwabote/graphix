@@ -7,14 +7,10 @@ using Unity.Transforms;
 namespace Graphix
 {
     [UpdateInGroup(typeof(BatchGroup))]
+    [RequireMatchingQueriesForUpdate]
     public partial struct Batcher : ISystem
     {
         private int m_BatchEntry;
-
-        public void OnCreate(ref SystemState state)
-        {
-            state.RequireForUpdate<MaterialMeshInfo>();
-        }
 
         public void OnUpdate(ref SystemState state)
         {

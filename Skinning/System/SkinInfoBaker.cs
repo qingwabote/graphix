@@ -5,6 +5,7 @@ using Unity.Entities;
 namespace Graphix
 {
     [WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
+    [RequireMatchingQueriesForUpdate]
     public partial struct SkinInfoBaker : ISystem
     {
         public void OnUpdate(ref SystemState state)
@@ -12,7 +13,7 @@ namespace Graphix
             Dictionary<Skin, int> skin2index = new();
             List<Skin> skins = new();
 
-            EntityCommandBuffer ecb = new(Allocator.TempJob);
+            EntityCommandBuffer ecb = new(Allocator.Temp);
             foreach (var (info, entity) in SystemAPI.Query<SkinInfoBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab))
             {
                 if (!skin2index.TryGetValue(info.Skin, out var skinIndex))
@@ -40,7 +41,6 @@ namespace Graphix
             );
 
             ecb.Playback(state.EntityManager);
-            ecb.Dispose();
         }
     }
 }

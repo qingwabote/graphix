@@ -7,6 +7,7 @@ using UnityEngine;
 namespace Graphix
 {
     [WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
+    [RequireMatchingQueriesForUpdate]
     public partial struct MaterialMeshBaker : ISystem
     {
         public void OnUpdate(ref SystemState state)
@@ -17,7 +18,7 @@ namespace Graphix
             List<Material> materials = new() { null };
             List<Mesh> meshes = new() { null };
 
-            EntityCommandBuffer ecb = new(Allocator.TempJob);
+            EntityCommandBuffer ecb = new(Allocator.Temp);
             foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities))
             {
                 if (!material2index.TryGetValue(mm.Material, out var materialIndex))
@@ -81,7 +82,6 @@ namespace Graphix
             );
 
             ecb.Playback(state.EntityManager);
-            ecb.Dispose();
         }
     }
 }
