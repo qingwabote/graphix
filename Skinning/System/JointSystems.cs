@@ -55,17 +55,11 @@ namespace Graphix
             using (new Profile.Scope(m_ProfileEntry))
             {
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
-                SkinInfo.Update(ref state);
                 var AnimationState = SystemAPI.GetComponentTypeHandle<AnimationState>(true);
-                AnimationState.Update(ref state);
                 var ClipBinging = SystemAPI.GetBufferTypeHandle<ClipBinging>(true);
-                ClipBinging.Update(ref state);
                 var JointSource = SystemAPI.GetComponentTypeHandle<JointSource>(false);
-                JointSource.Update(ref state);
                 var JointOffset = SystemAPI.GetComponentTypeHandle<JointOffset>(false);
-                JointOffset.Update(ref state);
                 var ChannelTarget = SystemAPI.GetBufferTypeHandle<ChannelTarget>(false);
-                ChannelTarget.Update(ref state);
 
                 var skinArray = SkinArray.GetCurrent(state.EntityManager);
 

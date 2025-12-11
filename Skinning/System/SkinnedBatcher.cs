@@ -65,18 +65,16 @@ namespace Graphix
             using (new Profile.Scope(m_BatchEntry))
             {
                 var MaterialMeshElement = SystemAPI.GetBufferTypeHandle<MaterialMeshElement>(true);
-                MaterialMeshElement.Update(ref state);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
-                LocalToWorld.Update(ref state);
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
-                SkinInfo.Update(ref state);
+                var MaterialMeshArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<MaterialMeshArray>();
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
                 var program = new SkinnedBatchProgram();
                 program.SkinArray = SkinArray.GetCurrent(state.EntityManager);
 
-                var batcher = new BatcherImpl<SkinnedBatchKey, SkinnedBatchProgram>(128);
+                var batcher = new BatcherImpl<SkinnedBatchKey, SkinnedBatchProgram>(MaterialMeshArray, 128);
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshElement, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     batcher.BeginChunk(ref state, chunk);

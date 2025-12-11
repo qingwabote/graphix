@@ -22,13 +22,12 @@ namespace Graphix
             using (new Profile.Scope(m_BatchEntry))
             {
                 var MaterialMesh = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(true);
-                MaterialMesh.Update(ref state);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
-                LocalToWorld.Update(ref state);
+                var MaterialMeshArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<MaterialMeshArray>();
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
-                var batcher = new BatcherImpl<MaterialMeshInfo, BatchProgram>(128);
+                var batcher = new BatcherImpl<MaterialMeshInfo, BatchProgram>(MaterialMeshArray, 128);
                 // make MaterialMeshInfo RW for WriteGroup
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAllRW<MaterialMeshInfo>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
                 {

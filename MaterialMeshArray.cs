@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Unity.Entities;
 using UnityEngine;
 
@@ -7,18 +6,10 @@ namespace Graphix
 {
     public struct MaterialMeshArray : ISharedComponentData, IEquatable<MaterialMeshArray>
     {
-        static private List<MaterialMeshArray> s_Instances = new();
-
-        static public MaterialMeshArray GetCurrent(EntityManager entityManager)
-        {
-            s_Instances.Clear();
-            entityManager.GetAllUniqueSharedComponentsManaged(s_Instances);
-            return s_Instances[1];
-        }
-
         public Material[] Materials;
         public Mesh[] Meshes;
 
+        [SerializeField]
         private int m_HashCode;
 
         internal MaterialMeshArray(Material[] materials, Mesh[] meshes, int hashCode)
