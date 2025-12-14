@@ -6,6 +6,7 @@ using Unity.Transforms;
 
 namespace Graphix
 {
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateInGroup(typeof(BatchGroup))]
     [RequireMatchingQueriesForUpdate]
     public partial struct Batcher : ISystem
