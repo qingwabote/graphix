@@ -76,7 +76,7 @@ namespace Graphix
             state.EntityManager.GetAllUniqueSharedComponentsManaged(scenes);
 
             ecb.AddSharedComponentManaged(
-                SystemAPI.QueryBuilder().WithAny<MaterialMeshBaking, MaterialMeshArrayBaking>().WithOptions(EntityQueryOptions.IncludePrefab).Build(),
+                SystemAPI.QueryBuilder().WithAny<MaterialMeshBaking, MaterialMeshArrayBaking>().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities).Build(),
                 new MaterialMeshArray(materials.ToArray(), meshes.ToArray(), scenes[1].SceneGUID.GetHashCode()),
                 EntityQueryCaptureMode.AtPlayback
             );
