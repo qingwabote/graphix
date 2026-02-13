@@ -12,20 +12,23 @@ namespace Graphix
     [RequireMatchingQueriesForUpdate]
     public partial struct SkinnedBatcher : ISystem
     {
-        private struct SkinnedBatchKey : IEquatable<SkinnedBatchKey>
+        private readonly struct SkinnedBatchKey : IEquatable<SkinnedBatchKey>
         {
-            public int Material;
-            public int Mesh;
-            public int Skin;
+            public readonly int Skin;
+
+            public SkinnedBatchKey(int skin)
+            {
+                Skin = skin;
+            }
 
             public override int GetHashCode()
             {
-                return Bastard.HashCode.Combine(Material, Mesh, Skin);
+                return Skin;
             }
 
             public bool Equals(SkinnedBatchKey other)
             {
-                return Material == other.Material && Mesh == other.Mesh && Skin == other.Skin;
+                return Skin == other.Skin;
             }
         }
 
@@ -33,23 +36,24 @@ namespace Graphix
         {
             private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
 
-            public SkinArray SkinArray;
+            public int Skin;
 
-            public NativeArray<SkinInfo> SkinInfos;
+            public Texture Texture;
 
-            public SkinnedBatchKey KeyGen(int entity, MaterialMeshInfo mm)
+            public SkinnedBatchProgram(int skin, Texture texture)
             {
-                return new SkinnedBatchKey
-                {
-                    Material = mm.Material,
-                    Mesh = mm.Mesh,
-                    Skin = SkinInfos[entity].Skin
-                };
+                Skin = skin;
+                Texture = texture;
             }
 
-            public void OnBatch(int entity, Batch batch)
+            public SkinnedBatchKey GetBatchKey()
             {
-                batch.PropertyTextureBind(s_JOINTS, SkinArray.GetCurrentStore(SkinInfos[entity]).Texture);
+                return new SkinnedBatchKey(Skin);
+            }
+
+            public void OnBatchCreated(Batch batch)
+            {
+                batch.PropertyTextureBind(s_JOINTS, Texture);
             }
         }
 
@@ -64,33 +68,36 @@ namespace Graphix
 
             using (new Profile.Scope(m_BatchEntry))
             {
-                var MaterialMeshElement = SystemAPI.GetBufferTypeHandle<MaterialMeshElement>(true);
+                var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
                 var MaterialMeshArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<MaterialMeshArray>();
 
-                var program = new SkinnedBatchProgram
-                {
-                    SkinArray = SkinArray.GetCurrent(state.EntityManager)
-                };
+                state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
-                var batcher = new BatcherImpl<SkinnedBatchKey, SkinnedBatchProgram>(MaterialMeshArray, 128);
-                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshElement, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
+                var skinArray = SkinArray.GetCurrent(state.EntityManager);
+
+                var batcher = new BatcherImpl<SkinnedBatchKey, SkinnedBatchProgram>(128);
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfoBuffered, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
-                    batcher.BeginChunk(ref state, chunk);
-                    var mma = chunk.GetBufferAccessor(ref MaterialMeshElement);
+                    var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
+                    var queue = EntitiesGraphicsSystem.GetQueue(materialMeshArray);
+
+                    var mp = new MaterialPropertyAccessor(ref state, chunk);
+                    var mma = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
                     var worlds = chunk.GetNativeArray(ref LocalToWorld);
-                    program.SkinInfos = chunk.GetNativeArray(ref SkinInfo);
-                    for (int entity = 0; entity < chunk.Count; entity++)
+                    var SkinInfos = chunk.GetNativeArray(ref SkinInfo);
+                    for (ushort entity = 0; entity < chunk.Count; entity++)
                     {
                         var mmb = mma[entity];
                         var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
+                        var skin = SkinInfos[entity];
+                        var program = new SkinnedBatchProgram(skin.Skin, skinArray.GetCurrentStore(skin).Texture);
                         for (int i = 0; i < mmb.Length; i++)
                         {
-                            batcher.Add(entity, worlds.ElementAtRO(entity).Value, mmp[i], ref program);
+                            batcher.Add(queue, materialMeshArray, mmp[i], mp.GetData(entity), worlds.ElementAtRO(entity).Value, program);
                         }
                     }
-                    batcher.EndChunk();
                 }
             }
         }

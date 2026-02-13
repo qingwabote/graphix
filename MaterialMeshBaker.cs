@@ -19,7 +19,7 @@ namespace Graphix
             List<Mesh> meshes = new() { null };
 
             EntityCommandBuffer ecb = new(Allocator.Temp);
-            foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities))
+            foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.FilterWriteGroup))
             {
                 if (!material2index.TryGetValue(mm.Material, out var materialIndex))
                 {
@@ -41,14 +41,14 @@ namespace Graphix
                     Mesh = -meshIndex
                 });
             }
-            foreach (var (mma, entity) in SystemAPI.Query<MaterialMeshArrayBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities))
+            foreach (var (mmb, entity) in SystemAPI.Query<MaterialMeshBufferedBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities))
             {
-                var mmb = ecb.AddBuffer<MaterialMeshElement>(entity);
-                var count = mma.Materials.Length;
+                var buffer = ecb.AddBuffer<MaterialMeshInfoBuffered>(entity);
+                var count = mmb.Materials.Length;
                 for (int i = 0; i < count; i++)
                 {
-                    var material = mma.Materials[i];
-                    var mesh = mma.Meshes[i];
+                    var material = mmb.Materials[i];
+                    var mesh = mmb.Meshes[i];
 
                     if (!material2index.TryGetValue(material, out var materialIndex))
                     {
@@ -64,11 +64,7 @@ namespace Graphix
                         mesh2index.Add(mesh, meshIndex);
                     }
 
-                    mmb.Add(new MaterialMeshElement
-                    {
-                        Material = -materialIndex,
-                        Mesh = -meshIndex
-                    });
+                    buffer.Add(new() { Material = -materialIndex, Mesh = -meshIndex });
                 }
             }
 
@@ -76,7 +72,7 @@ namespace Graphix
             state.EntityManager.GetAllUniqueSharedComponentsManaged(scenes);
 
             ecb.AddSharedComponentManaged(
-                SystemAPI.QueryBuilder().WithAny<MaterialMeshBaking, MaterialMeshArrayBaking>().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities).Build(),
+                SystemAPI.QueryBuilder().WithAny<MaterialMeshBaking, MaterialMeshBufferedBaking>().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities).Build(),
                 new MaterialMeshArray(materials.ToArray(), meshes.ToArray(), scenes[1].SceneGUID.GetHashCode()),
                 EntityQueryCaptureMode.AtPlayback
             );

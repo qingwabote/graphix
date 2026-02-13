@@ -26,8 +26,8 @@ namespace Unity.Rendering
 
         private static readonly MaterialPropertyBlock s_MPB = new();
 
-        private static readonly int s_Batches = Profile.DefineEntry("Batches");
-        private static readonly int s_Entities = Profile.DefineEntry("Instances");
+        private static readonly int s_Batches = Profile.DefineEntry("Batch");
+        private static readonly int s_Entities = Profile.DefineEntry("Instance");
         private static readonly int s_Graphics = Profile.DefineEntry("Graphics");
 
         static EntitiesGraphicsSystem()

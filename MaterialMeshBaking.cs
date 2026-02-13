@@ -11,7 +11,7 @@ namespace Graphix
     }
 
     [TemporaryBakingType]
-    public class MaterialMeshArrayBaking : IComponentData
+    public class MaterialMeshBufferedBaking : IComponentData
     {
         public Material[] Materials;
         public Mesh[] Meshes;

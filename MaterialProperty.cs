@@ -17,7 +17,7 @@ namespace Graphix
             }
         }
 
-        static public readonly int MaxCount = 32;
+        public const int Capacity = 7;
 
         static public DynamicComponentTypeHandle[] Handles;
 
@@ -41,7 +41,7 @@ namespace Graphix
                 if (s_TypeToProperty.ContainsKey(type.TypeIndex))
                     count++;
             }
-            Debug.Assert(count <= MaxCount);
+            Debug.Assert(count <= Capacity);
 
             UnsafeList<MaterialProperty> properties = new(count, Allocator.Persistent);
             foreach (var type in types)
@@ -64,14 +64,13 @@ namespace Graphix
             {
                 var type = typeInfo.Type;
 
-                bool isComponent = typeof(IComponentData).IsAssignableFrom(type);
-                if (isComponent)
+                if (typeof(IComponentData).IsAssignableFrom(type) || typeof(IBufferElementData).IsAssignableFrom(type))
                 {
                     var attributes = type.GetCustomAttributes(typeof(MaterialPropertyAttribute), false);
                     if (attributes.Length > 0)
                     {
                         var attribute = (MaterialPropertyAttribute)attributes[0];
-                        var property = new MaterialProperty(Shader.PropertyToID(attribute.Name), (short)UnsafeUtility.SizeOf(type), handles.Count);
+                        var property = new MaterialProperty(Shader.PropertyToID(attribute.Name), handles.Count, UnsafeUtility.SizeOf(type), typeInfo.TypeIndex.IsBuffer);
                         handles.Add(entityManager.GetDynamicComponentTypeHandle(ComponentType.ReadOnly(typeInfo.TypeIndex)));
                         s_TypeToProperty.Add(typeInfo.TypeIndex, property);
                     }
@@ -84,14 +83,16 @@ namespace Graphix
 
 
         public readonly int Name;
-        public readonly short Size;
-        public readonly int Type;
 
-        public MaterialProperty(int name, short size, int type)
+        private readonly int m_Type;
+        public int TypeIndex => m_Type >> 9;
+        public int TypeSize => m_Type >> 1 & 0xFF;
+        public bool TypeIsBuffer => (m_Type & 0x1) != 0;
+
+        public MaterialProperty(int name, int typeIndex, int typeSize, bool typeIsBuffer)
         {
             Name = name;
-            Size = size;
-            Type = type;
+            m_Type = (typeIndex << 9) | (typeSize << 1) | (typeIsBuffer ? 1 : 0);
         }
     }
 }

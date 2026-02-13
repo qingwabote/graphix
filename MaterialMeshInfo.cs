@@ -26,7 +26,7 @@ namespace Unity.Rendering
         }
     }
 
-    public struct MaterialMeshElement : IBufferElementData
+    public struct MaterialMeshInfoBuffered : IBufferElementData
     {
         public int Material;
         public int Mesh;

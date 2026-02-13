@@ -22,6 +22,7 @@ namespace Graphix
         public bool Baking;
     }
 
+    [WriteGroup(typeof(MaterialMeshInfoBuffered))]
     public struct SkinInfo : IComponentData
     {
         public int Skin;
@@ -43,17 +44,18 @@ namespace Graphix
 
     public unsafe struct JointSource : IComponentData
     {
-        private long m_Value;
+        // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/unsafe-code?utm_source=chatgpt.com#2451-general
+        private ulong m_Value;
 
         public NativeArray<float>* Value
         {
             get => (NativeArray<float>*)m_Value;
-            set => m_Value = (long)value;
+            set => m_Value = (ulong)value;
         }
 
         public JointSource(NativeArray<float>* value)
         {
-            m_Value = (long)value;
+            m_Value = (ulong)value;
         }
     }
 
@@ -120,7 +122,7 @@ namespace Graphix
                 materails.Add(renderer.sharedMaterial);
                 meshes.Add(renderer.sharedMesh);
             }
-            AddComponentObject(entity, new MaterialMeshArrayBaking
+            AddComponentObject(entity, new MaterialMeshBufferedBaking
             {
                 Materials = materails.ToArray(),
                 Meshes = meshes.ToArray()

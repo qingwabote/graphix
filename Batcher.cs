@@ -13,7 +13,7 @@ namespace Graphix
     {
         private int m_BatchEntry;
 
-        public void OnUpdate(ref SystemState state)
+        public unsafe void OnUpdate(ref SystemState state)
         {
             if (m_BatchEntry == 0)
             {
@@ -22,22 +22,43 @@ namespace Graphix
 
             using (new Profile.Scope(m_BatchEntry))
             {
-                var MaterialMesh = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(true);
+                var MaterialMeshInfo = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(true);
+                var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
                 var MaterialMeshArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<MaterialMeshArray>();
 
-                var batcher = new BatcherImpl<MaterialMeshInfo, BatchProgram>(MaterialMeshArray, 128);
-                // make MaterialMeshInfo RW for WriteGroup
-                foreach (var chunk in SystemAPI.QueryBuilder().WithAllRW<MaterialMeshInfo>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
+                state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
+
+                var batcher = new BatcherImpl<DefaultBatchKey, DefaultBatchProgram>(128);
+                // make MaterialMeshInfo and MaterialMeshInfoBuffered writable for WriteGroup
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAnyRW<MaterialMeshInfo, MaterialMeshInfoBuffered>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
-                    batcher.BeginChunk(ref state, chunk);
-                    var mms = chunk.GetNativeArray(ref MaterialMesh);
+                    var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
+                    var queue = EntitiesGraphicsSystem.GetQueue(materialMeshArray);
+                    var mp = new MaterialPropertyAccessor(ref state, chunk);
                     var worlds = chunk.GetNativeArray(ref LocalToWorld);
-                    for (int i = 0; i < chunk.Count; i++)
+
+                    if (chunk.Has(ref MaterialMeshInfo))
                     {
-                        batcher.Add(i, worlds.ElementAtRO(i).Value, mms[i]);
+                        var mms = chunk.GetNativeArray(ref MaterialMeshInfo);
+                        for (ushort entity = 0; entity < chunk.Count; entity++)
+                        {
+                            batcher.Add(queue, materialMeshArray, mms[entity], mp.GetData(entity), worlds.ElementAtRO(entity).Value);
+                        }
                     }
-                    batcher.EndChunk();
+                    else if (chunk.Has(ref MaterialMeshInfoBuffered))
+                    {
+                        var mma = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
+                        for (ushort entity = 0; entity < chunk.Count; entity++)
+                        {
+                            var mmb = mma[entity];
+                            var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
+                            for (ushort element = 0; element < mmb.Length; element++)
+                            {
+                                batcher.Add(queue, materialMeshArray, mmp[element], mp.GetData(entity, element), worlds.ElementAtRO(entity).Value);
+                            }
+                        }
+                    }
                 }
             }
         }
