@@ -69,10 +69,10 @@ namespace Graphix
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
                 var MaterialMeshArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<MaterialMeshArray>();
 
-                state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
-
-                var program = new SkinnedBatchProgram();
-                program.SkinArray = SkinArray.GetCurrent(state.EntityManager);
+                var program = new SkinnedBatchProgram
+                {
+                    SkinArray = SkinArray.GetCurrent(state.EntityManager)
+                };
 
                 var batcher = new BatcherImpl<SkinnedBatchKey, SkinnedBatchProgram>(MaterialMeshArray, 128);
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshElement, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))

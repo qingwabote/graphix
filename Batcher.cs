@@ -6,7 +6,7 @@ using Unity.Transforms;
 
 namespace Graphix
 {
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default)]
     [UpdateInGroup(typeof(BatchGroup))]
     [RequireMatchingQueriesForUpdate]
     public partial struct Batcher : ISystem
@@ -25,8 +25,6 @@ namespace Graphix
                 var MaterialMesh = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(true);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
                 var MaterialMeshArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<MaterialMeshArray>();
-
-                state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
                 var batcher = new BatcherImpl<MaterialMeshInfo, BatchProgram>(MaterialMeshArray, 128);
                 // make MaterialMeshInfo RW for WriteGroup
