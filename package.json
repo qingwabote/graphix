@@ -1,6 +1,6 @@
 {
   "name": "graphix",
-  "description": "An alternative to entities.graphics for budget devices",
+  "description": "An alternative to Entities Graphics for budget devices",
   "version": "0.0.1",
   "unity": "2022.3",
   "displayName": "Graphix"
