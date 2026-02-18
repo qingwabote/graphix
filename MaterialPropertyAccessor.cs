@@ -9,9 +9,10 @@ namespace Graphix
 {
     public unsafe ref struct MaterialPropertyData
     {
+        private readonly MaterialPropertyAccessor* m_Accessor;
+
         private readonly ushort m_Entity;
         private readonly ushort m_Element;
-        private readonly MaterialPropertyAccessor* m_Accessor;
 
         private int m_Index;
 

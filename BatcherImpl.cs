@@ -81,14 +81,7 @@ namespace Graphix
 
             foreach (var (name, size, data) in mp)
             {
-                if (size == sizeof(float))
-                {
-                    batch.PropertyFloatAdd(name, *(float*)data);
-                }
-                else
-                {
-                    batch.PropertyVectorAdd(name, *(float4*)data);
-                }
+                batch.PropertyDataAdd(name, (byte*)data, size);
             }
 
             batch.LocalToWorlds.Add(world);

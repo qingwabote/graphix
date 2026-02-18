@@ -9,9 +9,6 @@ namespace Graphix
 {
     public class Batch
     {
-        private static readonly TransientPool<List<float>> s_FloatPool = new();
-        private static readonly TransientPool<List<Vector4>> s_VectorPool = new();
-
         public int Mesh;
         public int Material;
 
@@ -19,10 +16,11 @@ namespace Graphix
         public int Count => LocalToWorlds.Length;
 
         private readonly Dictionary<int, Texture> m_Textures = new();
-        private readonly Dictionary<int, List<float>> m_Floats = new();
-        private readonly Dictionary<int, List<Vector4>> m_Vectors = new();
 
-        public bool PropertyAcquired => m_Floats.Count > 0 || m_Vectors.Count > 0;
+        private FixedList32Bytes<int> m_PropNames = new();
+        private FixedList128Bytes<ArrayUnsafeList<byte>> m_PropValues = new();
+
+        public bool PropertyAcquired => m_PropValues.Length > 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void PropertyTextureBind(int name, Texture texture)
@@ -30,34 +28,23 @@ namespace Graphix
             m_Textures.Add(name, texture);
         }
 
-        public void PropertyFloatAdd(int name, float value)
+        public unsafe void PropertyDataAdd(int name, byte* src, int count)
         {
-            if (!m_Floats.TryGetValue(name, out var list))
+            var index = m_PropNames.IndexOf(name);
+            if (index == -1)
             {
-                list = s_FloatPool.Get();
-                list.Clear();
-                m_Floats.Add(name, list);
+                index = m_PropNames.Length;
+                m_PropNames.Add(name);
+                m_PropValues.Add(new(count == sizeof(float) ? ArrayType.Float : ArrayType.Vector));
             }
-            for (int i = list.Count; i < Count; i++)
-            {
-                list.Add(default);
-            }
-            list.Add(value);
-        }
 
-        public void PropertyVectorAdd(int name, Vector4 value)
-        {
-            if (!m_Vectors.TryGetValue(name, out var list))
+            ref var list = ref m_PropValues.ElementAt(index);
+            var d = Count * count - list.Length;
+            if (d > 0)
             {
-                list = s_VectorPool.Get();
-                list.Clear();
-                m_Vectors.Add(name, list);
+                list.Add(null, d);
             }
-            for (int i = list.Count; i < Count; i++)
-            {
-                list.Add(default);
-            }
-            list.Add(value);
+            list.Add(src, count);
         }
 
         public void PropertyToBlock(MaterialPropertyBlock output)
@@ -67,37 +54,42 @@ namespace Graphix
                 output.SetTexture(id, texture);
             }
 
-            foreach (var (id, list) in m_Floats)
+            for (int i = 0; i < m_PropNames.Length; i++)
             {
-                output.SetFloatArray(id, list);
-            }
-
-            foreach (var (id, list) in m_Vectors)
-            {
-                output.SetVectorArray(id, list);
+                ref var list = ref m_PropValues.ElementAt(i);
+                if (list.ArrayType == ArrayType.Float)
+                {
+                    output.SetFloatArray(m_PropNames[i], (float[])ArrayAllocatorManaged.Get(list.Location));
+                }
+                else
+                {
+                    output.SetVectorArray(m_PropNames[i], (Vector4[])ArrayAllocatorManaged.Get(list.Location));
+                }
             }
         }
 
-        public void PropertyToBlock(int index, MaterialPropertyBlock output)
+        public unsafe void PropertyToBlock(int index, MaterialPropertyBlock output)
         {
-            foreach (var (id, list) in m_Floats)
+            for (int i = 0; i < m_PropNames.Length; i++)
             {
-                output.SetFloat(id, list[index]);
-            }
-
-            foreach (var (id, list) in m_Vectors)
-            {
-                output.SetVector(id, list[index]);
+                ref var list = ref m_PropValues.ElementAt(i);
+                if (list.ArrayType == ArrayType.Float)
+                {
+                    output.SetFloat(m_PropNames[i], *(float*)(list.Ptr + index * sizeof(float)));
+                }
+                else
+                {
+                    output.SetVector(m_PropNames[i], *(Vector4*)(list.Ptr + index * sizeof(Vector4)));
+                }
             }
         }
 
         public void Clear()
         {
             LocalToWorlds.Clear();
-
             m_Textures.Clear();
-            m_Floats.Clear();
-            m_Vectors.Clear();
+            m_PropNames.Clear();
+            m_PropValues.Clear();
         }
     }
 }
