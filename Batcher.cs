@@ -11,7 +11,14 @@ namespace Graphix
     [RequireMatchingQueriesForUpdate]
     public partial struct Batcher : ISystem
     {
+        private BatcherImpl<DefaultBatchKey, DefaultBatchProgram> m_Batcher;
+
         private int m_BatchEntry;
+
+        public void OnCreate(ref SystemState state)
+        {
+            m_Batcher = new(Allocator.Persistent);
+        }
 
         public unsafe void OnUpdate(ref SystemState state)
         {
@@ -29,7 +36,7 @@ namespace Graphix
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
-                var batcher = new BatcherImpl<DefaultBatchKey, DefaultBatchProgram>(128);
+                using var scope = m_Batcher.MakeScope();
                 // make MaterialMeshInfo and MaterialMeshInfoBuffered writable for WriteGroup
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAnyRW<MaterialMeshInfo, MaterialMeshInfoBuffered>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
@@ -43,7 +50,7 @@ namespace Graphix
                         var mms = chunk.GetNativeArray(ref MaterialMeshInfo);
                         for (ushort entity = 0; entity < chunk.Count; entity++)
                         {
-                            batcher.Add(queue, materialMeshArray, mms[entity], mp.GetData(entity), worlds.ElementAtRO(entity).Value);
+                            scope.Merge(queue, materialMeshArray, mms[entity], mp.GetData(entity), worlds.ElementAtRO(entity).Value);
                         }
                     }
                     else if (chunk.Has(ref MaterialMeshInfoBuffered))
@@ -55,7 +62,7 @@ namespace Graphix
                             var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                             for (ushort element = 0; element < mmb.Length; element++)
                             {
-                                batcher.Add(queue, materialMeshArray, mmp[element], mp.GetData(entity, element), worlds.ElementAtRO(entity).Value);
+                                scope.Merge(queue, materialMeshArray, mmp[element], mp.GetData(entity, element), worlds.ElementAtRO(entity).Value);
                             }
                         }
                     }

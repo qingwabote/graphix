@@ -12,15 +12,16 @@ namespace Graphix
         public int Mesh;
         public int Material;
 
+        public int InitialCapacity;
+
         public NativeList<float4x4> LocalToWorlds = new(Allocator.Persistent);
         public int Count => LocalToWorlds.Length;
 
         private readonly Dictionary<int, Texture> m_Textures = new();
 
-        private FixedList32Bytes<int> m_PropNames = new();
-        private FixedList128Bytes<ArrayUnsafeList<byte>> m_PropValues = new();
+        private UnsafeHashMap<int, ArrayUnsafeList<byte>> m_PropData = new(8, Allocator.Persistent);
 
-        public bool PropertyAcquired => m_PropValues.Length > 0;
+        public bool PropertyAcquired => m_PropData.Count > 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void PropertyTextureBind(int name, Texture texture)
@@ -30,15 +31,12 @@ namespace Graphix
 
         public unsafe void PropertyDataAdd(int name, byte* src, int count)
         {
-            var index = m_PropNames.IndexOf(name);
-            if (index == -1)
+            ref var list = ref m_PropData.EnsureValueRef(name, out var uninitialized);
+            if (uninitialized)
             {
-                index = m_PropNames.Length;
-                m_PropNames.Add(name);
-                m_PropValues.Add(new(count == sizeof(float) ? ArrayType.Float : ArrayType.Vector));
+                list = new(count == sizeof(float) ? ArrayType.Float : ArrayType.Vector, InitialCapacity * count);
             }
 
-            ref var list = ref m_PropValues.ElementAt(index);
             var d = Count * count - list.Length;
             if (d > 0)
             {
@@ -54,32 +52,32 @@ namespace Graphix
                 output.SetTexture(id, texture);
             }
 
-            for (int i = 0; i < m_PropNames.Length; i++)
+            foreach (var kv in m_PropData)
             {
-                ref var list = ref m_PropValues.ElementAt(i);
+                ref var list = ref kv.Value;
                 if (list.ArrayType == ArrayType.Float)
                 {
-                    output.SetFloatArray(m_PropNames[i], (float[])ArrayAllocatorManaged.Get(list.Location));
+                    output.SetFloatArray(kv.Key, (float[])ArrayAllocatorManaged.Get(list.Location));
                 }
                 else
                 {
-                    output.SetVectorArray(m_PropNames[i], (Vector4[])ArrayAllocatorManaged.Get(list.Location));
+                    output.SetVectorArray(kv.Key, (Vector4[])ArrayAllocatorManaged.Get(list.Location));
                 }
             }
         }
 
         public unsafe void PropertyToBlock(int index, MaterialPropertyBlock output)
         {
-            for (int i = 0; i < m_PropNames.Length; i++)
+            foreach (var kv in m_PropData)
             {
-                ref var list = ref m_PropValues.ElementAt(i);
+                ref var list = ref kv.Value;
                 if (list.ArrayType == ArrayType.Float)
                 {
-                    output.SetFloat(m_PropNames[i], *(float*)(list.Ptr + index * sizeof(float)));
+                    output.SetFloat(kv.Key, *(float*)(list.Ptr + index * sizeof(float)));
                 }
                 else
                 {
-                    output.SetVector(m_PropNames[i], *(Vector4*)(list.Ptr + index * sizeof(Vector4)));
+                    output.SetVector(kv.Key, *(Vector4*)(list.Ptr + index * sizeof(Vector4)));
                 }
             }
         }
@@ -88,8 +86,7 @@ namespace Graphix
         {
             LocalToWorlds.Clear();
             m_Textures.Clear();
-            m_PropNames.Clear();
-            m_PropValues.Clear();
+            m_PropData.Clear();
         }
     }
 }

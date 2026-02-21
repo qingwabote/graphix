@@ -1,8 +1,9 @@
 using System;
 using Bastard;
-using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using Unity.Rendering;
+using static Unity.Collections.AllocatorManager;
 
 namespace Graphix
 {
@@ -24,9 +25,9 @@ namespace Graphix
         public void OnBatchCreated(Batch batch) { }
     }
 
-    public unsafe ref struct BatcherImpl<TKey, TProgram> where TKey : unmanaged, IEquatable<TKey> where TProgram : IBatchProgram<TKey>
+    public struct BatcherImpl<TKey, TProgram> where TKey : unmanaged, IEquatable<TKey> where TProgram : IBatchProgram<TKey>
     {
-        internal readonly struct FullBatchKey : IEquatable<FullBatchKey>
+        internal readonly struct FullKey : IEquatable<FullKey>
         {
             internal readonly int Material;
 
@@ -36,7 +37,7 @@ namespace Graphix
 
             internal readonly TKey Key;
 
-            internal FullBatchKey(int material, int mesh, int materialMeshArray, TKey key)
+            internal FullKey(int material, int mesh, int materialMeshArray, TKey key)
             {
                 Material = material;
                 Mesh = mesh;
@@ -49,42 +50,92 @@ namespace Graphix
                 return Bastard.HashCode.Combine(Material, Mesh, MaterialMeshArray, Key.GetHashCode());
             }
 
-            public bool Equals(FullBatchKey other)
+            public bool Equals(FullKey other)
             {
                 return Material == other.Material && Mesh == other.Mesh && MaterialMeshArray == other.MaterialMeshArray && Key.Equals(other.Key);
             }
         }
 
-        private NativeHashMap<FullBatchKey, int> m_Cache;
-
-        public BatcherImpl(int initialCapacity)
+        internal struct State
         {
-            m_Cache = new(initialCapacity, Allocator.Temp);
+            public int Index;
+            public int MaxCount;
         }
 
-        public void Add(RecycleQueue<Batch> queue, int materialMeshArray, MaterialMeshInfo mm, MaterialPropertyData mp, in float4x4 world, TProgram program = default)
+        public readonly unsafe ref struct Scope
         {
-            Batch batch;
-            var key = new FullBatchKey(mm.Material, mm.Mesh, materialMeshArray, program.GetBatchKey());
-            if (m_Cache.TryGetValue(key, out int index))
+            private readonly Bastard.UnsafeHashMap<FullKey, State>* m_States;
+
+            internal Scope(ref Bastard.UnsafeHashMap<FullKey, State> states)
             {
-                batch = queue.Data[index];
-            }
-            else
-            {
-                m_Cache.Add(key, queue.Count);
-                batch = queue.Push();
-                batch.Material = mm.Material;
-                batch.Mesh = mm.Mesh;
-                program.OnBatchCreated(batch);
+                m_States = (Bastard.UnsafeHashMap<FullKey, State>*)UnsafeUtility.AddressOf(ref states);
             }
 
-            foreach (var (name, size, data) in mp)
+            public void Merge(RecycleQueue<Batch> queue, int materialMeshArray, MaterialMeshInfo mm, MaterialPropertyData mp, in float4x4 world, TProgram program = default)
             {
-                batch.PropertyDataAdd(name, (byte*)data, size);
+                Batch batch;
+                var key = new FullKey(mm.Material, mm.Mesh, materialMeshArray, program.GetBatchKey());
+                ref var state = ref m_States->EnsureValueRef(key, out var uninitialized);
+                if (uninitialized)
+                {
+                    state.Index = -1;
+                    state.MaxCount = 0;
+                }
+
+                if (state.Index != -1)
+                {
+                    batch = queue.Data[state.Index];
+                }
+                else
+                {
+                    state.Index = queue.Count;
+
+                    batch = queue.Push();
+                    batch.Material = mm.Material;
+                    batch.Mesh = mm.Mesh;
+                    batch.InitialCapacity = math.max(state.MaxCount, 1);
+                    program.OnBatchCreated(batch);
+                }
+
+                unsafe
+                {
+                    foreach (var (name, size, data) in mp)
+                    {
+                        batch.PropertyDataAdd(name, (byte*)data, size);
+                    }
+                }
+
+                batch.LocalToWorlds.Add(world);
             }
 
-            batch.LocalToWorlds.Add(world);
+            public void Dispose()
+            {
+                foreach (var kv in *m_States)
+                {
+                    ref var state = ref kv.Value;
+                    if (state.Index == -1)
+                    {
+                        continue;
+                    }
+
+                    var queue = EntitiesGraphicsSystem.GetQueue(kv.Key.MaterialMeshArray);
+                    var batch = queue.Data[state.Index];
+                    state.MaxCount = math.max(batch.Count, state.MaxCount);
+                    state.Index = -1;
+                }
+            }
+        }
+
+        private Bastard.UnsafeHashMap<FullKey, State> m_States;
+
+        public BatcherImpl(AllocatorHandle allocator)
+        {
+            m_States = new(128, allocator);
+        }
+
+        public Scope MakeScope()
+        {
+            return new Scope(ref m_States);
         }
     }
 }

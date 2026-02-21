@@ -57,7 +57,14 @@ namespace Graphix
             }
         }
 
+        private BatcherImpl<SkinnedBatchKey, SkinnedBatchProgram> m_Batcher;
+
         private int m_BatchEntry;
+
+        public void OnCreate(ref SystemState state)
+        {
+            m_Batcher = new(Allocator.Persistent);
+        }
 
         unsafe public void OnUpdate(ref SystemState state)
         {
@@ -77,7 +84,7 @@ namespace Graphix
 
                 var skinArray = SkinArray.GetCurrent(state.EntityManager);
 
-                var batcher = new BatcherImpl<SkinnedBatchKey, SkinnedBatchProgram>(128);
+                using var scope = m_Batcher.MakeScope();
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfoBuffered, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
@@ -95,7 +102,7 @@ namespace Graphix
                         var program = new SkinnedBatchProgram(skin.Skin, skinArray.GetCurrentStore(skin).Texture);
                         for (int i = 0; i < mmb.Length; i++)
                         {
-                            batcher.Add(queue, materialMeshArray, mmp[i], mp.GetData(entity), worlds.ElementAtRO(entity).Value, program);
+                            scope.Merge(queue, materialMeshArray, mmp[i], mp.GetData(entity), worlds.ElementAtRO(entity).Value, program);
                         }
                     }
                 }
