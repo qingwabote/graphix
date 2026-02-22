@@ -1,5 +1,5 @@
 using System;
-using Bastard;
+using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using Unity.Rendering;
@@ -10,7 +10,7 @@ namespace Graphix
     public interface IBatchProgram<TKey>
     {
         TKey GetBatchKey();
-        void OnBatchCreated(Batch batch);
+        void OnBatchCreated(ref Batch batch);
     }
 
     public readonly struct DefaultBatchKey : IEquatable<DefaultBatchKey>
@@ -22,10 +22,10 @@ namespace Graphix
     public readonly struct DefaultBatchProgram : IBatchProgram<DefaultBatchKey>
     {
         public DefaultBatchKey GetBatchKey() { return default; }
-        public void OnBatchCreated(Batch batch) { }
+        public void OnBatchCreated(ref Batch batch) { }
     }
 
-    public struct BatcherImpl<TKey, TProgram> where TKey : unmanaged, IEquatable<TKey> where TProgram : IBatchProgram<TKey>
+    public struct BatcherImpl<TKey, TProgram> where TKey : unmanaged, IEquatable<TKey> where TProgram : unmanaged, IBatchProgram<TKey>
     {
         internal readonly struct FullKey : IEquatable<FullKey>
         {
@@ -56,55 +56,42 @@ namespace Graphix
             }
         }
 
-        internal struct State
-        {
-            public int Index;
-            public int MaxCount;
-        }
-
         public readonly unsafe ref struct Scope
         {
-            private readonly Bastard.UnsafeHashMap<FullKey, State>* m_States;
+            private readonly Bastard.UnsafeHashMap<FullKey, Batch.State>* m_States;
 
-            internal Scope(ref Bastard.UnsafeHashMap<FullKey, State> states)
+            internal Scope(ref Bastard.UnsafeHashMap<FullKey, Batch.State> states)
             {
-                m_States = (Bastard.UnsafeHashMap<FullKey, State>*)UnsafeUtility.AddressOf(ref states);
+                m_States = (Bastard.UnsafeHashMap<FullKey, Batch.State>*)UnsafeUtility.AddressOf(ref states);
             }
 
-            public void Merge(RecycleQueue<Batch> queue, int materialMeshArray, MaterialMeshInfo mm, MaterialPropertyData mp, in float4x4 world, TProgram program = default)
+            public void Merge(ref UnsafeList<Batch> queue, int materialMeshArray, MaterialMeshInfo mm, MaterialPropertyData mp, in float4x4 world, TProgram program = default)
             {
-                Batch batch;
                 var key = new FullKey(mm.Material, mm.Mesh, materialMeshArray, program.GetBatchKey());
                 ref var state = ref m_States->EnsureValueRef(key, out var uninitialized);
                 if (uninitialized)
                 {
                     state.Index = -1;
-                    state.MaxCount = 0;
+                    state.MaxCount = 1;
                 }
 
-                if (state.Index != -1)
+                if (state.Index == -1)
                 {
-                    batch = queue.Data[state.Index];
-                }
-                else
-                {
-                    state.Index = queue.Count;
+                    state.Index = queue.Length;
 
-                    batch = queue.Push();
-                    batch.Material = mm.Material;
-                    batch.Mesh = mm.Mesh;
-                    batch.InitialCapacity = math.max(state.MaxCount, 1);
-                    program.OnBatchCreated(batch);
+                    var b = new Batch(ref state, mm.Material, mm.Mesh, Allocator.Temp);
+                    program.OnBatchCreated(ref b);
+                    queue.Add(b);
                 }
 
+                ref var batch = ref queue.ElementAt(state.Index);
                 unsafe
                 {
                     foreach (var (name, size, data) in mp)
                     {
-                        batch.PropertyDataAdd(name, (byte*)data, size);
+                        batch.PropertyDataAdd(ref state, name, (byte*)data, size);
                     }
                 }
-
                 batch.LocalToWorlds.Add(world);
             }
 
@@ -118,15 +105,15 @@ namespace Graphix
                         continue;
                     }
 
-                    var queue = EntitiesGraphicsSystem.GetQueue(kv.Key.MaterialMeshArray);
-                    var batch = queue.Data[state.Index];
+                    ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(kv.Key.MaterialMeshArray);
+                    ref var batch = ref queue.ElementAt(state.Index);
                     state.MaxCount = math.max(batch.Count, state.MaxCount);
                     state.Index = -1;
                 }
             }
         }
 
-        private Bastard.UnsafeHashMap<FullKey, State> m_States;
+        private Bastard.UnsafeHashMap<FullKey, Batch.State> m_States;
 
         public BatcherImpl(AllocatorHandle allocator)
         {

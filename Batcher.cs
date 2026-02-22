@@ -1,4 +1,5 @@
 using Bastard;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
@@ -20,6 +21,7 @@ namespace Graphix
             m_Batcher = new(Allocator.Persistent);
         }
 
+        [BurstCompile]
         public unsafe void OnUpdate(ref SystemState state)
         {
             if (m_BatchEntry == 0)
@@ -41,7 +43,7 @@ namespace Graphix
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAnyRW<MaterialMeshInfo, MaterialMeshInfoBuffered>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
-                    var queue = EntitiesGraphicsSystem.GetQueue(materialMeshArray);
+                    ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
                     var mp = new MaterialPropertyAccessor(ref state, chunk);
                     var worlds = chunk.GetNativeArray(ref LocalToWorld);
 
@@ -50,7 +52,7 @@ namespace Graphix
                         var mms = chunk.GetNativeArray(ref MaterialMeshInfo);
                         for (ushort entity = 0; entity < chunk.Count; entity++)
                         {
-                            scope.Merge(queue, materialMeshArray, mms[entity], mp.GetData(entity), worlds.ElementAtRO(entity).Value);
+                            scope.Merge(ref queue, materialMeshArray, mms[entity], mp.GetData(entity), worlds.ElementAtRO(entity).Value);
                         }
                     }
                     else if (chunk.Has(ref MaterialMeshInfoBuffered))
@@ -62,7 +64,7 @@ namespace Graphix
                             var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                             for (ushort element = 0; element < mmb.Length; element++)
                             {
-                                scope.Merge(queue, materialMeshArray, mmp[element], mp.GetData(entity, element), worlds.ElementAtRO(entity).Value);
+                                scope.Merge(ref queue, materialMeshArray, mmp[element], mp.GetData(entity, element), worlds.ElementAtRO(entity).Value);
                             }
                         }
                     }

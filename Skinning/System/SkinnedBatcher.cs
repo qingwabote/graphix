@@ -32,13 +32,13 @@ namespace Graphix
             }
         }
 
-        private struct SkinnedBatchProgram : IBatchProgram<SkinnedBatchKey>
+        private readonly struct SkinnedBatchProgram : IBatchProgram<SkinnedBatchKey>
         {
             private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
 
-            public int Skin;
+            public readonly int Skin;
 
-            public Texture Texture;
+            public readonly UnityObjectRef<Texture> Texture;
 
             public SkinnedBatchProgram(int skin, Texture texture)
             {
@@ -51,7 +51,7 @@ namespace Graphix
                 return new SkinnedBatchKey(Skin);
             }
 
-            public void OnBatchCreated(Batch batch)
+            public void OnBatchCreated(ref Batch batch)
             {
                 batch.PropertyTextureBind(s_JOINTS, Texture);
             }
@@ -70,7 +70,7 @@ namespace Graphix
         {
             if (m_BatchEntry == 0)
             {
-                m_BatchEntry = Profile.DefineEntry("SkinnedBatcher");
+                m_BatchEntry = Profile.DefineEntry("SkinBatcher");
             }
 
             using (new Profile.Scope(m_BatchEntry))
@@ -88,7 +88,7 @@ namespace Graphix
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfoBuffered, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
-                    var queue = EntitiesGraphicsSystem.GetQueue(materialMeshArray);
+                    ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
 
                     var mp = new MaterialPropertyAccessor(ref state, chunk);
                     var mma = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
@@ -102,7 +102,7 @@ namespace Graphix
                         var program = new SkinnedBatchProgram(skin.Skin, skinArray.GetCurrentStore(skin).Texture);
                         for (int i = 0; i < mmb.Length; i++)
                         {
-                            scope.Merge(queue, materialMeshArray, mmp[i], mp.GetData(entity), worlds.ElementAtRO(entity).Value, program);
+                            scope.Merge(ref queue, materialMeshArray, mmp[i], mp.GetData(entity), worlds.ElementAtRO(entity).Value, program);
                         }
                     }
                 }

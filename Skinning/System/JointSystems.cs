@@ -49,7 +49,7 @@ namespace Graphix
         {
             if (m_ProfileEntry == 0)
             {
-                m_ProfileEntry = Profile.DefineEntry("JointAllocator");
+                m_ProfileEntry = Profile.DefineEntry("JointAlloc");
             }
 
             using (new Profile.Scope(m_ProfileEntry))
@@ -137,7 +137,7 @@ namespace Graphix
         {
             if (m_ProfileEntry == 0)
             {
-                m_ProfileEntry = Profile.DefineEntry("JointUpdater");
+                m_ProfileEntry = Profile.DefineEntry("JointUpdate");
             }
 
             using (new Profile.Scope(m_ProfileEntry))
@@ -203,7 +203,7 @@ namespace Graphix
         {
             if (m_ProfileEntry == 0)
             {
-                m_ProfileEntry = Profile.DefineEntry("JointUploader");
+                m_ProfileEntry = Profile.DefineEntry("JointUpload");
             }
 
             using (new Profile.Scope(m_ProfileEntry))

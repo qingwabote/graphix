@@ -1,17 +1,27 @@
-using System;
-using System.Collections.Generic;
 using Bastard;
 using Graphix;
+using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using UnityEngine;
 
 namespace Graphix
 {
-    struct Isolate<TKey> where TKey : unmanaged, IEquatable<TKey>
+    struct EntitiesGraphicsSystemUnmanaged
     {
-        public NativeHashMap<TKey, int> cache;
-        public RecycleQueue<Batch> queue;
+        private struct QueuesTag { }
+        internal static readonly SharedStatic<Bastard.UnsafeHashMap<int, UnsafeList<Batch>>> s_Queues = SharedStatic<Bastard.UnsafeHashMap<int, UnsafeList<Batch>>>.GetOrCreate<QueuesTag>();
+
+        public unsafe static ref UnsafeList<Batch> GetQueue(int materialMeshArray)
+        {
+            var queue = s_Queues.Data.EnsureValuePtr(materialMeshArray, out var uninitialized);
+            if (uninitialized)
+            {
+                *queue = new(8, Allocator.Persistent);
+            }
+            return ref UnsafeUtility.AsRef<UnsafeList<Batch>>(queue);
+        }
     }
 }
 
@@ -20,9 +30,6 @@ namespace Unity.Rendering
     public partial class EntitiesGraphicsSystem : SystemBase
     {
         private static readonly Registry<Material> s_Materials;
-
-        private static readonly TransientPool<RecycleQueue<Batch>> s_Pool = new();
-        private static readonly Dictionary<int, RecycleQueue<Batch>> s_Queues = new();
 
         private static readonly MaterialPropertyBlock s_MPB = new();
 
@@ -34,15 +41,8 @@ namespace Unity.Rendering
         {
             s_Materials = new();
             s_Materials.Register(null);
-        }
 
-        public static RecycleQueue<Batch> GetQueue(int materialMeshArrayIndex)
-        {
-            if (!s_Queues.TryGetValue(materialMeshArrayIndex, out var queue))
-            {
-                s_Queues.Add(materialMeshArrayIndex, queue = s_Pool.Get());
-            }
-            return queue;
+            EntitiesGraphicsSystemUnmanaged.s_Queues.Data = new(2, Allocator.Persistent);
         }
 
         public int RegisterMaterial(Material material)
@@ -67,13 +67,14 @@ namespace Unity.Rendering
             using (new Profile.Scope(s_Graphics))
             {
                 int instances = 0;
-                foreach (var (index, queue) in s_Queues)
+                foreach (var kv in EntitiesGraphicsSystemUnmanaged.s_Queues.Data)
                 {
-                    var materialMeshArray = EntityManager.GetSharedComponentManaged<MaterialMeshArray>(index);
+                    var materialMeshArray = EntityManager.GetSharedComponentManaged<MaterialMeshArray>(kv.Key);
+                    ref var queue = ref kv.Value;
 
-                    Profile.Delta(s_Batches, queue.Count);
+                    Profile.Delta(s_Batches, queue.Length);
 
-                    foreach (var batch in queue.Drain())
+                    foreach (var batch in queue)
                     {
                         var material = batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material);
                         var mesh = materialMeshArray.Meshes[-batch.Mesh];
@@ -113,12 +114,10 @@ namespace Unity.Rendering
 
                         }
                         instances += batch.Count;
-                        batch.Clear();
                     }
+                    queue.Clear();
                 }
 
-
-                s_Queues.Clear();
                 Profile.Delta(s_Entities, instances);
             }
         }

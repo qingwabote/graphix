@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using Bastard;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
@@ -89,7 +90,7 @@ namespace Graphix
             for (int i = 0; i < Properties.Length; i++)
             {
                 var property = Properties.Ptr[i];
-                ref var handle = ref MaterialProperty.Handles[property.TypeIndex];
+                ref var handle = ref MaterialProperty.Handles.Data.ElementAt(property.TypeIndex);
                 handle.Update(ref state);
                 if (property.TypeIsBuffer)
                 {

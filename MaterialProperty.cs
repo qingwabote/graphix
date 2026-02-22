@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
@@ -19,16 +20,19 @@ namespace Graphix
 
         public const int Capacity = 7;
 
-        static public DynamicComponentTypeHandle[] Handles;
+        private struct HandlesTag { }
+        static public readonly SharedStatic<NativeArray<DynamicComponentTypeHandle>> Handles = SharedStatic<NativeArray<DynamicComponentTypeHandle>>.GetOrCreate<HandlesTag>();
 
+        private struct TypeToPropertyTag { }
         // use TypeIndex of ComponentType as key, ignore AccessModeType
-        static private UnsafeHashMap<int, MaterialProperty> s_TypeToProperty;
+        static private readonly SharedStatic<UnsafeHashMap<int, MaterialProperty>> s_TypeToProperty = SharedStatic<UnsafeHashMap<int, MaterialProperty>>.GetOrCreate<TypeToPropertyTag>();
 
-        static private UnsafeHashMap<EntityArchetype, UnsafeList<MaterialProperty>.ReadOnly> s_ArchetypeToProperty;
+        private struct ArchetypeToPropertyTag { }
+        static private readonly SharedStatic<UnsafeHashMap<EntityArchetype, UnsafeList<MaterialProperty>.ReadOnly>> s_ArchetypeToProperty = SharedStatic<UnsafeHashMap<EntityArchetype, UnsafeList<MaterialProperty>.ReadOnly>>.GetOrCreate<ArchetypeToPropertyTag>();
 
         static public UnsafeList<MaterialProperty>.ReadOnly Get(EntityArchetype archetype)
         {
-            if (s_ArchetypeToProperty.TryGetValue(archetype, out var output))
+            if (s_ArchetypeToProperty.Data.TryGetValue(archetype, out var output))
             {
                 return output;
             }
@@ -38,7 +42,7 @@ namespace Graphix
             int count = 0;
             foreach (var type in types)
             {
-                if (s_TypeToProperty.ContainsKey(type.TypeIndex))
+                if (s_TypeToProperty.Data.ContainsKey(type.TypeIndex))
                     count++;
             }
             Debug.Assert(count <= Capacity);
@@ -46,19 +50,19 @@ namespace Graphix
             UnsafeList<MaterialProperty> properties = new(count, Allocator.Persistent);
             foreach (var type in types)
             {
-                if (s_TypeToProperty.TryGetValue(type.TypeIndex, out MaterialProperty property))
+                if (s_TypeToProperty.Data.TryGetValue(type.TypeIndex, out MaterialProperty property))
                     properties.Add(property);
             }
             NativeSortExtension.Sort(properties, new PropertyComparer());
 
-            s_ArchetypeToProperty.Add(archetype, output = properties.AsReadOnly());
+            s_ArchetypeToProperty.Data.Add(archetype, output = properties.AsReadOnly());
 
             return output;
         }
 
         static public void Initialize(EntityManager entityManager)
         {
-            s_TypeToProperty = new(8, Allocator.Persistent);
+            s_TypeToProperty.Data = new(8, Allocator.Persistent);
             List<DynamicComponentTypeHandle> handles = new();
             foreach (var typeInfo in TypeManager.AllTypes)
             {
@@ -72,13 +76,13 @@ namespace Graphix
                         var attribute = (MaterialPropertyAttribute)attributes[0];
                         var property = new MaterialProperty(Shader.PropertyToID(attribute.Name), handles.Count, UnsafeUtility.SizeOf(type), typeInfo.TypeIndex.IsBuffer);
                         handles.Add(entityManager.GetDynamicComponentTypeHandle(ComponentType.ReadOnly(typeInfo.TypeIndex)));
-                        s_TypeToProperty.Add(typeInfo.TypeIndex, property);
+                        s_TypeToProperty.Data.Add(typeInfo.TypeIndex, property);
                     }
                 }
             }
-            Handles = handles.ToArray();
+            Handles.Data = handles.ToNativeArray(Allocator.Persistent);
 
-            s_ArchetypeToProperty = new(8, Allocator.Persistent);
+            s_ArchetypeToProperty.Data = new(8, Allocator.Persistent);
         }
 
 
