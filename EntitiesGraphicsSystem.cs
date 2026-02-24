@@ -67,6 +67,7 @@ namespace Unity.Rendering
             using (new Profile.Scope(s_Graphics))
             {
                 int instances = 0;
+                var camera = Camera.main; // Explicit camera for the RenderGroup of Unity6 with WX SDK
                 foreach (var kv in EntitiesGraphicsSystemUnmanaged.s_Queues.Data)
                 {
                     var materialMeshArray = EntityManager.GetSharedComponentManaged<MaterialMeshArray>(kv.Key);
@@ -84,6 +85,7 @@ namespace Unity.Rendering
                             batch.PropertyToBlock(s_MPB);
                             var rp = new RenderParams(material)
                             {
+                                camera = camera,
                                 matProps = s_MPB
                             };
                             Graphics.RenderMeshInstanced(rp, mesh, 0, batch.LocalToWorlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
@@ -98,6 +100,7 @@ namespace Unity.Rendering
                                     batch.PropertyToBlock(i, s_MPB);
                                     var rp = new RenderParams(material)
                                     {
+                                        camera = camera,
                                         matProps = s_MPB
                                     };
                                     Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
@@ -105,7 +108,10 @@ namespace Unity.Rendering
                             }
                             else
                             {
-                                var rp = new RenderParams(material);
+                                var rp = new RenderParams(material)
+                                {
+                                    camera = camera,
+                                };
                                 for (int i = 0; i < batch.Count; i++)
                                 {
                                     Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
