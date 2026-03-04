@@ -22,14 +22,12 @@ namespace Graphix
     public partial struct Freezer : ISystem { }
 
 
-    [WorldSystemFilter(WorldSystemFilterFlags.Default)]
     [UpdateInGroup(typeof(PresentationSystemGroup)), UpdateBefore(typeof(EntitiesGraphicsSystem))]
     public partial class BatchGroup : ComponentSystemGroup { }
 }
 
 namespace Unity.Rendering
 {
-    [WorldSystemFilter(WorldSystemFilterFlags.Default)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     public partial class EntitiesGraphicsSystem : SystemBase { }
 }
