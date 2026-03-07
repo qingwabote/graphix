@@ -59,7 +59,7 @@ namespace Graphix
 
         private BatcherImpl<SkinnedBatchKey, SkinnedBatchProgram> m_Batcher;
 
-        private int m_BatchEntry;
+        private Profile.Handle m_BatchHandle;
 
         public void OnCreate(ref SystemState state)
         {
@@ -68,12 +68,12 @@ namespace Graphix
 
         unsafe public void OnUpdate(ref SystemState state)
         {
-            if (m_BatchEntry == 0)
+            if (m_BatchHandle.Entry == 0)
             {
-                m_BatchEntry = Profile.DefineEntry("SkinBatcher");
+                m_BatchHandle = Profile.DefineEntry("SkinBatcher");
             }
 
-            using (new Profile.Scope(m_BatchEntry))
+            using (m_BatchHandle.MakeScope())
             {
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);

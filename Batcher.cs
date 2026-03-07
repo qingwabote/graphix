@@ -14,7 +14,7 @@ namespace Graphix
     {
         private BatcherImpl<DefaultBatchKey, DefaultBatchProgram> m_Batcher;
 
-        private int m_BatchEntry;
+        private Profile.Handle m_BatchHandle;
 
         public void OnCreate(ref SystemState state)
         {
@@ -24,12 +24,12 @@ namespace Graphix
         [BurstCompile]
         public unsafe void OnUpdate(ref SystemState state)
         {
-            if (m_BatchEntry == 0)
+            if (m_BatchHandle.Entry == 0)
             {
-                m_BatchEntry = Profile.DefineEntry("Batcher");
+                m_BatchHandle = Profile.DefineEntry("Batcher");
             }
 
-            using (new Profile.Scope(m_BatchEntry))
+            using (m_BatchHandle.MakeScope())
             {
                 var MaterialMeshInfo = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(true);
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);

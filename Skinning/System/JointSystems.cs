@@ -37,7 +37,7 @@ namespace Graphix
 
         private static readonly NativeHashMap<ClipFrame, int> s_ClipFrameOffsets = new(1024, Allocator.Persistent);
 
-        private int m_ProfileEntry;
+        private Profile.Handle m_ProfileHandle;
 
         public void OnCreate(ref SystemState state)
         {
@@ -47,12 +47,12 @@ namespace Graphix
 
         public void OnUpdate(ref SystemState state)
         {
-            if (m_ProfileEntry == 0)
+            if (m_ProfileHandle.Entry == 0)
             {
-                m_ProfileEntry = Profile.DefineEntry("JointAlloc");
+                m_ProfileHandle = Profile.DefineEntry("JointAlloc");
             }
 
-            using (new Profile.Scope(m_ProfileEntry))
+            using (m_ProfileHandle.MakeScope())
             {
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
                 var AnimationState = SystemAPI.GetComponentTypeHandle<AnimationState>(true);
@@ -125,7 +125,7 @@ namespace Graphix
 
     public partial struct JointUpdater : ISystem
     {
-        private int m_ProfileEntry;
+        private Profile.Handle m_ProfileHandle;
 
         public void OnCreate(ref SystemState state)
         {
@@ -135,12 +135,12 @@ namespace Graphix
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            if (m_ProfileEntry == 0)
+            if (m_ProfileHandle.Entry == 0)
             {
-                m_ProfileEntry = Profile.DefineEntry("JointUpdate");
+                m_ProfileHandle = Profile.DefineEntry("JointUpdate");
             }
 
-            using (new Profile.Scope(m_ProfileEntry))
+            using (m_ProfileHandle.MakeScope())
             {
                 var models = new NativeList<float4x4>(Allocator.Temp);
                 foreach (var (skin, nodes, source, offset) in SystemAPI.Query<SkinInfo, DynamicBuffer<SkinNode>, RefRW<JointSource>, JointOffset>())
@@ -190,7 +190,7 @@ namespace Graphix
 
     public partial struct JointUploader : ISystem
     {
-        private int m_ProfileEntry;
+        private Profile.Handle m_ProfileHandle;
 
         public void OnCreate(ref SystemState state)
         {
@@ -201,12 +201,12 @@ namespace Graphix
 
         public void OnUpdate(ref SystemState state)
         {
-            if (m_ProfileEntry == 0)
+            if (m_ProfileHandle.Entry == 0)
             {
-                m_ProfileEntry = Profile.DefineEntry("JointUpload");
+                m_ProfileHandle = Profile.DefineEntry("JointUpload");
             }
 
-            using (new Profile.Scope(m_ProfileEntry))
+            using (m_ProfileHandle.MakeScope())
             {
                 var skinArray = SkinArray.GetCurrent(state.EntityManager);
                 foreach (var info in SystemAPI.Query<SkinInfo>())

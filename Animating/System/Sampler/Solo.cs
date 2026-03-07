@@ -1,10 +1,7 @@
 using System;
 using Bastard;
 using Unity.Burst;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
-using Unity.Mathematics;
 using Unity.Transforms;
 
 namespace Graphix
@@ -12,7 +9,7 @@ namespace Graphix
     [UpdateInGroup(typeof(AnimationSamplerGroup))]
     partial struct Solo : ISystem
     {
-        private int m_ProfileEntry;
+        private Profile.Handle m_ProfileHandle;
 
         private ComponentLookup<LocalTransform> m_LocalTransformLookup;
 
@@ -26,12 +23,12 @@ namespace Graphix
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            if (m_ProfileEntry == 0)
+            if (m_ProfileHandle.Entry == 0)
             {
-                m_ProfileEntry = Profile.DefineEntry("Solo");
+                m_ProfileHandle = Profile.DefineEntry("Solo");
             }
 
-            using (new Profile.Scope(m_ProfileEntry))
+            using (m_ProfileHandle.MakeScope())
             {
                 m_LocalTransformLookup.Update(ref state);
 

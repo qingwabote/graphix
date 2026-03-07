@@ -6,7 +6,7 @@ namespace Graphix
 {
     struct TransformProfiler
     {
-        static public int Transform = Profile.DefineEntry("Transform");
+        static public Profile.Handle Transform = Profile.DefineEntry("Transform");
     }
 
     [UpdateInGroup(typeof(TransformSystemGroup)), UpdateBefore(typeof(LocalToWorldSystem)), UpdateAfter(typeof(ParentSystem))]
@@ -14,7 +14,7 @@ namespace Graphix
     {
         public void OnUpdate(ref SystemState state)
         {
-            Profile.Begin(TransformProfiler.Transform);
+            TransformProfiler.Transform.Begin();
         }
     }
 
@@ -23,7 +23,7 @@ namespace Graphix
     {
         public void OnUpdate(ref SystemState state)
         {
-            Profile.End(TransformProfiler.Transform);
+            TransformProfiler.Transform.End();
         }
     }
 }

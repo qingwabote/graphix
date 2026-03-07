@@ -33,9 +33,9 @@ namespace Unity.Rendering
 
         private static readonly MaterialPropertyBlock s_MPB = new();
 
-        private static readonly int s_Batches = Profile.DefineEntry("Batch");
-        private static readonly int s_Entities = Profile.DefineEntry("Instance");
-        private static readonly int s_Graphics = Profile.DefineEntry("Graphics");
+        private static Profile.Handle s_Batches = Profile.DefineEntry("Batch");
+        private static Profile.Handle s_Entities = Profile.DefineEntry("Instance");
+        private static Profile.Handle s_Graphics = Profile.DefineEntry("Graphics");
 
         static EntitiesGraphicsSystem()
         {
@@ -64,68 +64,69 @@ namespace Unity.Rendering
 
         protected override void OnUpdate()
         {
-            using (new Profile.Scope(s_Graphics))
+            using var scope = s_Graphics.MakeScope();
+
+            int batchCount = 0;
+            int instanceCount = 0;
+            var camera = Camera.main; // Explicit camera for the RenderGroup of Unity6 with WX SDK
+            foreach (var kv in EntitiesGraphicsSystemUnmanaged.s_Queues.Data)
             {
-                int instances = 0;
-                var camera = Camera.main; // Explicit camera for the RenderGroup of Unity6 with WX SDK
-                foreach (var kv in EntitiesGraphicsSystemUnmanaged.s_Queues.Data)
+                var materialMeshArray = EntityManager.GetSharedComponentManaged<MaterialMeshArray>(kv.Key);
+                ref var queue = ref kv.Value;
+
+                batchCount += queue.Length;
+
+                foreach (var batch in queue)
                 {
-                    var materialMeshArray = EntityManager.GetSharedComponentManaged<MaterialMeshArray>(kv.Key);
-                    ref var queue = ref kv.Value;
-
-                    Profile.Delta(s_Batches, queue.Length);
-
-                    foreach (var batch in queue)
+                    var material = batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material);
+                    var mesh = materialMeshArray.Meshes[-batch.Mesh];
+                    if (material.enableInstancing)
                     {
-                        var material = batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material);
-                        var mesh = materialMeshArray.Meshes[-batch.Mesh];
-                        if (material.enableInstancing)
+                        s_MPB.Clear();
+                        batch.PropertyToBlock(s_MPB);
+                        var rp = new RenderParams(material)
                         {
-                            s_MPB.Clear();
-                            batch.PropertyToBlock(s_MPB);
-                            var rp = new RenderParams(material)
-                            {
-                                camera = camera,
-                                matProps = s_MPB
-                            };
-                            Graphics.RenderMeshInstanced(rp, mesh, 0, batch.LocalToWorlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
-                        }
-                        else
+                            camera = camera,
+                            matProps = s_MPB
+                        };
+                        Graphics.RenderMeshInstanced(rp, mesh, 0, batch.LocalToWorlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
+                    }
+                    else
+                    {
+                        if (batch.PropertyAcquired)
                         {
-                            if (batch.PropertyAcquired)
+                            for (int i = 0; i < batch.Count; i++)
                             {
-                                for (int i = 0; i < batch.Count; i++)
-                                {
-                                    s_MPB.Clear();
-                                    batch.PropertyToBlock(i, s_MPB);
-                                    var rp = new RenderParams(material)
-                                    {
-                                        camera = camera,
-                                        matProps = s_MPB
-                                    };
-                                    Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
-                                }
-                            }
-                            else
-                            {
+                                s_MPB.Clear();
+                                batch.PropertyToBlock(i, s_MPB);
                                 var rp = new RenderParams(material)
                                 {
                                     camera = camera,
+                                    matProps = s_MPB
                                 };
-                                for (int i = 0; i < batch.Count; i++)
-                                {
-                                    Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
-                                }
+                                Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
                             }
-
                         }
-                        instances += batch.Count;
-                    }
-                    queue.Clear();
-                }
+                        else
+                        {
+                            var rp = new RenderParams(material)
+                            {
+                                camera = camera,
+                            };
+                            for (int i = 0; i < batch.Count; i++)
+                            {
+                                Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
+                            }
+                        }
 
-                Profile.Delta(s_Entities, instances);
+                    }
+                    instanceCount += batch.Count;
+                }
+                queue.Clear();
             }
+
+            s_Batches.Delta(batchCount);
+            s_Entities.Delta(instanceCount);
         }
     }
 }
