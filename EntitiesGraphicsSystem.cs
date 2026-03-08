@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Graphix
 {
-    struct EntitiesGraphicsSystemUnmanaged
+    public partial struct EntitiesGraphicsSystemUnmanaged : ISystem
     {
         private struct QueuesTag { }
         internal static readonly SharedStatic<Bastard.UnsafeHashMap<int, UnsafeList<Batch>>> s_Queues = SharedStatic<Bastard.UnsafeHashMap<int, UnsafeList<Batch>>>.GetOrCreate<QueuesTag>();
@@ -18,9 +18,14 @@ namespace Graphix
             var queue = s_Queues.Data.EnsureValuePtr(materialMeshArray, out var uninitialized);
             if (uninitialized)
             {
-                *queue = new(8, Allocator.Persistent);
+                *queue = new(32, Allocator.Temp);
             }
             return ref UnsafeUtility.AsRef<UnsafeList<Batch>>(queue);
+        }
+
+        public void OnUpdate(ref SystemState state)
+        {
+            s_Queues.Data = new(2, Allocator.Temp);
         }
     }
 }
@@ -41,8 +46,6 @@ namespace Unity.Rendering
         {
             s_Materials = new();
             s_Materials.Register(null);
-
-            EntitiesGraphicsSystemUnmanaged.s_Queues.Data = new(2, Allocator.Persistent);
         }
 
         public int RegisterMaterial(Material material)
@@ -122,7 +125,6 @@ namespace Unity.Rendering
                     }
                     instanceCount += batch.Count;
                 }
-                queue.Clear();
             }
 
             s_Batches.Delta(batchCount);

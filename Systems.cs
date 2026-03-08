@@ -21,6 +21,8 @@ namespace Graphix
     [UpdateAfter(typeof(TransformSystemGroup))]
     public partial struct Freezer : ISystem { }
 
+    [UpdateInGroup(typeof(PresentationSystemGroup)), UpdateBefore(typeof(BatchGroup))]
+    public partial struct EntitiesGraphicsSystemUnmanaged : ISystem { }
 
     [UpdateInGroup(typeof(PresentationSystemGroup)), UpdateBefore(typeof(EntitiesGraphicsSystem))]
     public partial class BatchGroup : ComponentSystemGroup { }
