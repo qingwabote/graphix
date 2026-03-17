@@ -5,6 +5,8 @@
         "Unity.Mathematics",
         "Unity.Collections",
         "Unity.Entities",
+        "Unity.Scenes",
+        "Unity.Scenes.Editor",
         "Graphix",
         "Bastard"
     ],

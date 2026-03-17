@@ -34,12 +34,14 @@ namespace Unity.Rendering
 {
     public partial class EntitiesGraphicsSystem : SystemBase
     {
+#if UNITY_EDITOR
+        public static bool SceneViewShowsRuntime;
+#endif
+
         private static readonly Registry<Material> s_Materials;
 
         private static readonly MaterialPropertyBlock s_MPB = new();
 
-        private static Profile.Handle s_Batches = Profile.DefineEntry("Batch");
-        private static Profile.Handle s_Entities = Profile.DefineEntry("Instance");
         private static Profile.Handle s_Graphics = Profile.DefineEntry("Graphics");
 
         static EntitiesGraphicsSystem()
@@ -71,7 +73,21 @@ namespace Unity.Rendering
 
             int batchCount = 0;
             int instanceCount = 0;
-            var camera = Camera.main; // Explicit camera for the RenderGroup of Unity6 with WX SDK
+            Camera camera = null;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            camera = Camera.main; // Explicit camera for the RenderGroup of Unity6 with WX SDK
+#endif
+
+            ulong sceneCullingMasks = 0;
+            bool overrideSceneCullingMask = false;
+#if UNITY_EDITOR
+            if (!SceneViewShowsRuntime)
+            {
+                sceneCullingMasks = UnityEditor.SceneManagement.SceneCullingMasks.GameViewObjects;
+                overrideSceneCullingMask = true;
+            }
+#endif
+
             foreach (var kv in EntitiesGraphicsSystemUnmanaged.s_Queues.Data)
             {
                 var materialMeshArray = EntityManager.GetSharedComponentManaged<MaterialMeshArray>(kv.Key);
@@ -90,6 +106,8 @@ namespace Unity.Rendering
                         var rp = new RenderParams(material)
                         {
                             camera = camera,
+                            sceneCullingMask = sceneCullingMasks,
+                            overrideSceneCullingMask = overrideSceneCullingMask,
                             matProps = s_MPB
                         };
                         Graphics.RenderMeshInstanced(rp, mesh, 0, batch.LocalToWorlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
@@ -105,6 +123,8 @@ namespace Unity.Rendering
                                 var rp = new RenderParams(material)
                                 {
                                     camera = camera,
+                                    sceneCullingMask = sceneCullingMasks,
+                                    overrideSceneCullingMask = overrideSceneCullingMask,
                                     matProps = s_MPB
                                 };
                                 Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
@@ -115,6 +135,8 @@ namespace Unity.Rendering
                             var rp = new RenderParams(material)
                             {
                                 camera = camera,
+                                sceneCullingMask = sceneCullingMasks,
+                                overrideSceneCullingMask = overrideSceneCullingMask,
                             };
                             for (int i = 0; i < batch.Count; i++)
                             {
@@ -126,9 +148,6 @@ namespace Unity.Rendering
                     instanceCount += batch.Count;
                 }
             }
-
-            s_Batches.Delta(batchCount);
-            s_Entities.Delta(instanceCount);
         }
     }
 }
