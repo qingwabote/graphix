@@ -73,7 +73,7 @@ namespace Graphix
                 m_BatchHandle = Profile.DefineEntry("SkinBatcher");
             }
 
-            using (m_BatchHandle.MakeScope())
+            using (m_BatchHandle.Auto())
             {
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);

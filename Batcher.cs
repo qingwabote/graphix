@@ -29,7 +29,7 @@ namespace Graphix
                 m_BatchHandle = Profile.DefineEntry("Batcher");
             }
 
-            using (m_BatchHandle.MakeScope())
+            using (m_BatchHandle.Auto())
             {
                 var MaterialMeshInfo = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(true);
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);

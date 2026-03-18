@@ -69,7 +69,7 @@ namespace Unity.Rendering
 
         protected override void OnUpdate()
         {
-            using var scope = s_Graphics.MakeScope();
+            using var scope = s_Graphics.Auto();
 
             int batchCount = 0;
             int instanceCount = 0;

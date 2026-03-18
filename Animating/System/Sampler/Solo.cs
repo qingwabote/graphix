@@ -28,7 +28,7 @@ namespace Graphix
                 m_ProfileHandle = Profile.DefineEntry("Solo");
             }
 
-            using (m_ProfileHandle.MakeScope())
+            using (m_ProfileHandle.Auto())
             {
                 m_LocalTransformLookup.Update(ref state);
 

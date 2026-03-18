@@ -52,7 +52,7 @@ namespace Graphix
                 m_ProfileHandle = Profile.DefineEntry("JointAlloc");
             }
 
-            using (m_ProfileHandle.MakeScope())
+            using (m_ProfileHandle.Auto())
             {
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
                 var AnimationState = SystemAPI.GetComponentTypeHandle<AnimationState>(true);
@@ -140,7 +140,7 @@ namespace Graphix
                 m_ProfileHandle = Profile.DefineEntry("JointUpdate");
             }
 
-            using (m_ProfileHandle.MakeScope())
+            using (m_ProfileHandle.Auto())
             {
                 var models = new NativeList<float4x4>(Allocator.Temp);
                 foreach (var (skin, nodes, source, offset) in SystemAPI.Query<SkinInfo, DynamicBuffer<SkinNode>, RefRW<JointSource>, JointOffset>())
@@ -206,7 +206,7 @@ namespace Graphix
                 m_ProfileHandle = Profile.DefineEntry("JointUpload");
             }
 
-            using (m_ProfileHandle.MakeScope())
+            using (m_ProfileHandle.Auto())
             {
                 var skinArray = SkinArray.GetCurrent(state.EntityManager);
                 foreach (var info in SystemAPI.Query<SkinInfo>())
