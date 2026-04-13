@@ -15,6 +15,12 @@ namespace Unity.Rendering
             set => Material = value;
         }
 
+        public int MeshID
+        {
+            get => Mesh;
+            set => Mesh = value;
+        }
+
         public override int GetHashCode()
         {
             return Bastard.HashCode.Combine(Material, Mesh);

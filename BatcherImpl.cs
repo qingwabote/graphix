@@ -67,6 +67,11 @@ namespace Graphix
 
             public void Merge(ref UnsafeList<Batch> queue, int materialMeshArray, MaterialMeshInfo mm, MaterialPropertyData mp, in float4x4 world, TProgram program = default)
             {
+                if (mm.Material == 0 || mm.Mesh == 0)
+                {
+                    return;
+                }
+
                 var key = new FullKey(mm.Material, mm.Mesh, materialMeshArray, program.GetBatchKey());
                 ref var state = ref m_States->EnsureValueRef(key, out var uninitialized);
                 if (uninitialized)

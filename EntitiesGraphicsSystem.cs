@@ -39,15 +39,18 @@ namespace Unity.Rendering
 #endif
 
         private static readonly Registry<Material> s_Materials;
+        private static readonly Registry<Mesh> s_Meshes;
 
         private static readonly MaterialPropertyBlock s_MPB = new();
 
-        private static Profile.Handle s_Graphics = Profile.DefineEntry("Graphics");
+        private static readonly Profile.Handle s_Graphics = Profile.DefineEntry("Graphics");
 
         static EntitiesGraphicsSystem()
         {
             s_Materials = new();
             s_Materials.Register(null);
+            s_Meshes = new();
+            s_Meshes.Register(null);
         }
 
         public int RegisterMaterial(Material material)
@@ -57,7 +60,7 @@ namespace Unity.Rendering
 
         public int RegisterMesh(Mesh mesh)
         {
-            return 0;
+            return s_Meshes.Register(mesh);
         }
 
         protected override void OnCreate()
@@ -90,7 +93,7 @@ namespace Unity.Rendering
 
             foreach (var kv in EntitiesGraphicsSystemUnmanaged.s_Queues.Data)
             {
-                var materialMeshArray = EntityManager.GetSharedComponentManaged<MaterialMeshArray>(kv.Key);
+                var materialMeshArray = kv.Key != -1 ? EntityManager.GetSharedComponentManaged<MaterialMeshArray>(kv.Key) : default;
                 ref var queue = ref kv.Value;
 
                 batchCount += queue.Length;
@@ -98,7 +101,7 @@ namespace Unity.Rendering
                 foreach (var batch in queue)
                 {
                     var material = batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material);
-                    var mesh = materialMeshArray.Meshes[-batch.Mesh];
+                    var mesh = batch.Mesh < 0 ? materialMeshArray.Meshes[-batch.Mesh] : s_Meshes.Get(batch.Mesh);
                     if (material.enableInstancing)
                     {
                         s_MPB.Clear();
