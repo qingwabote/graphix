@@ -7,7 +7,7 @@ namespace Graphix
 {
     public struct Freezing : IComponentData { }
 
-    [TemporaryBakingType]
+    [BakingType]
     public struct FreezingBaking : IBufferElementData
     {
         public Entity Value;

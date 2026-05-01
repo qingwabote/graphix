@@ -93,6 +93,11 @@ namespace Graphix
 
         public unsafe void PropertyToBlock(int index, MaterialPropertyBlock output)
         {
+            for (int i = 0; i < m_TextureNames.Length; i++)
+            {
+                output.SetTexture(m_TextureNames[i], m_TextureValues[i]);
+            }
+
             for (int i = 0; i < m_PropNames.Length; i++)
             {
                 ref var list = ref m_PropValues.ElementAt(i);

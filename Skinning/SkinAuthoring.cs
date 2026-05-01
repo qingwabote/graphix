@@ -15,7 +15,7 @@ namespace Graphix
         public bool Baking;
     }
 
-    [TemporaryBakingType]
+    [BakingType]
     public class SkinInfoBaking : IComponentData
     {
         public Skin Skin;
@@ -36,7 +36,7 @@ namespace Graphix
         public int Parent;
     }
 
-    [TemporaryBakingType]
+    [BakingType]
     public struct TransformBaking : IBufferElementData
     {
         public LocalTransform Value;

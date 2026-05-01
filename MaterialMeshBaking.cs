@@ -3,14 +3,14 @@ using UnityEngine;
 
 namespace Graphix
 {
-    [TemporaryBakingType]
+    [BakingType]
     public class MaterialMeshBaking : IComponentData
     {
         public Mesh Mesh;
         public Material Material;
     }
 
-    [TemporaryBakingType]
+    [BakingType]
     public class MaterialMeshBufferedBaking : IComponentData
     {
         public Material[] Materials;
