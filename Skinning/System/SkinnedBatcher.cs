@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace Graphix
 {
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateInGroup(typeof(BatchGroup))]
     [RequireMatchingQueriesForUpdate]
     public partial struct SkinnedBatcher : ISystem
