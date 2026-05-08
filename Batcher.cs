@@ -12,7 +12,7 @@ namespace Graphix
     [RequireMatchingQueriesForUpdate]
     public partial struct Batcher : ISystem
     {
-        private BatcherImpl<DefaultBatchKey, DefaultBatchProgram> m_Batcher;
+        private BatcherImpl m_Batcher;
 
         private Profile.Handle m_BatchHandle;
 

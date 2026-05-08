@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Bastard;
@@ -10,18 +11,144 @@ using static Unity.Collections.AllocatorManager;
 
 namespace Graphix
 {
-    public struct Batch
+    public unsafe struct Batch
     {
-        public struct State
+        private struct PropertyDataStore
         {
-            public int Index;
-            public int MaxCount;
+            private const int Capacity = 7;
+
+            private int m_Count;
+            private fixed int m_Names[Capacity];
+            private fixed ulong m_Ptrs[Capacity];
+            private fixed short m_Locations[Capacity];
+            private fixed ushort m_Capacities[Capacity];
+            private fixed ushort m_Sizes[Capacity];
+            private fixed byte m_ArrayTypes[Capacity];
+
+            public readonly int Count
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => m_Count;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Add(int name, byte* src, int size, int instanceIndex, int instanceCapacity)
+            {
+                var index = -1;
+                for (int i = 0; i < m_Count; i++)
+                {
+                    if (m_Names[i] == name)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+
+                if (index == -1)
+                {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                    if (m_Count >= Capacity)
+                    {
+                        throw new InvalidOperationException($"Batch material property count exceeds {Capacity}.");
+                    }
+#endif
+                    index = m_Count++;
+                    m_Names[index] = name;
+                    m_ArrayTypes[index] = (byte)(size == sizeof(float) ? ArrayType.Float : ArrayType.Vector);
+                    m_Locations[index] = -1;
+                    m_Capacities[index] = 0;
+                    m_Sizes[index] = 0;
+                    m_Ptrs[index] = 0;
+
+                    Resize(index, instanceCapacity * size);
+                }
+
+                var padding = instanceIndex * size - GetSize(index);
+                if (padding > 0)
+                {
+                    AddBytes(index, null, padding);
+                }
+                AddBytes(index, src, size);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public readonly int GetName(int index)
+            {
+                return m_Names[index];
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public readonly ArrayType GetArrayType(int index)
+            {
+                return (ArrayType)m_ArrayTypes[index];
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public readonly int GetLocation(int index)
+            {
+                return m_Locations[index];
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public readonly int GetSize(int index)
+            {
+                return m_Sizes[index];
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public readonly byte* GetPtr(int index)
+            {
+                return (byte*)m_Ptrs[index];
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void AddBytes(int index, byte* src, int count)
+            {
+                var size = GetSize(index);
+                if (size + count > m_Capacities[index])
+                {
+                    Resize(index, size + count);
+                }
+
+                var ptr = GetPtr(index) + size;
+                if (src == null)
+                {
+                    UnsafeUtility.MemSet(ptr, 0, count);
+                }
+                else
+                {
+                    UnsafeUtility.MemCpy(ptr, src, count);
+                }
+
+                m_Sizes[index] = (ushort)(size + count);
+            }
+
+            private void Resize(int index, int capacity)
+            {
+                var arrayType = GetArrayType(index);
+                var size = arrayType == ArrayType.Float ? sizeof(float) : UnsafeUtility.SizeOf<Vector4>();
+                var arrayLength = (ushort)math.ceil(capacity / (float)size);
+                void*
+#if UNITY_WEBGL && !UNITY_EDITOR
+                ptr = ArrayAllocatorManaged.Alloc(arrayType, ref arrayLength, out short location);
+#else
+                ptr = ArrayAllocator.Alloc.Data.Invoke(arrayType, ref arrayLength, out short location);
+#endif
+                var oldSize = GetSize(index);
+                if (oldSize > 0)
+                {
+                    UnsafeUtility.MemCpy(ptr, GetPtr(index), oldSize);
+                }
+
+                m_Locations[index] = location;
+                m_Capacities[index] = (ushort)(size * arrayLength);
+                m_Ptrs[index] = (ulong)ptr;
+            }
         }
 
         public NativeList<float4x4> LocalToWorlds;
 
-        private FixedList32Bytes<int> m_PropNames;
-        private FixedList128Bytes<ArrayUnsafeList<byte>> m_PropValues;
+        private PropertyDataStore m_PropertyData;
 
         private FixedList32Bytes<int> m_TextureNames;
         private FixedList32Bytes<UnityObjectRef<Texture>> m_TextureValues;
@@ -30,14 +157,13 @@ namespace Graphix
         public readonly int Mesh;
 
         public readonly int Count => LocalToWorlds.Length;
-        public readonly bool PropertyAcquired => m_PropNames.Length > 0;
+        public readonly bool PropertyAcquired => m_PropertyData.Count > 0;
 
-        public Batch(ref State state, int material, int mesh, AllocatorHandle allocator)
+        public Batch(int capacity, int material, int mesh, AllocatorHandle allocator)
         {
-            LocalToWorlds = new(state.MaxCount, allocator);
+            LocalToWorlds = new(capacity, allocator);
 
-            m_PropNames = new();
-            m_PropValues = new();
+            m_PropertyData = new();
 
             m_TextureNames = new();
             m_TextureValues = new();
@@ -53,23 +179,9 @@ namespace Graphix
             m_TextureValues.Add(texture);
         }
 
-        public unsafe void PropertyDataAdd(ref State state, int name, byte* src, int count)
+        public void PropertyDataAdd(int name, byte* src, int size, int capacity)
         {
-            var index = m_PropNames.IndexOf(name);
-            if (index == -1)
-            {
-                m_PropValues.Add(new(count == sizeof(float) ? ArrayType.Float : ArrayType.Vector, state.MaxCount * count));
-                index = m_PropNames.Length;
-                m_PropNames.Add(name);
-            }
-
-            ref var list = ref m_PropValues.ElementAt(index);
-            var d = Count * count - list.Length;
-            if (d > 0)
-            {
-                list.Add(null, d);
-            }
-            list.Add(src, count);
+            m_PropertyData.Add(name, src, size, Count, capacity);
         }
 
         private static readonly List<float> s_FloatList = new();
@@ -82,39 +194,37 @@ namespace Graphix
                 output.SetTexture(m_TextureNames[i], m_TextureValues[i]);
             }
 
-            for (int i = 0; i < m_PropNames.Length; i++)
+            for (int i = 0; i < m_PropertyData.Count; i++)
             {
-                ref var list = ref m_PropValues.ElementAt(i);
-                if (list.ArrayType == ArrayType.Float)
+                if (m_PropertyData.GetArrayType(i) == ArrayType.Float)
                 {
-                    NoAllocHelpers.ResetListContents(s_FloatList, (float[])ArrayAllocatorManaged.Get(list.Location), list.Length / sizeof(float));
-                    output.SetFloatArray(m_PropNames[i], s_FloatList);
+                    NoAllocHelpers.ResetListContents(s_FloatList, (float[])ArrayAllocatorManaged.Get(m_PropertyData.GetLocation(i)), m_PropertyData.GetSize(i) / sizeof(float));
+                    output.SetFloatArray(m_PropertyData.GetName(i), s_FloatList);
                 }
                 else
                 {
-                    NoAllocHelpers.ResetListContents(s_VectorList, (Vector4[])ArrayAllocatorManaged.Get(list.Location), list.Length / UnsafeUtility.SizeOf<Vector4>());
-                    output.SetVectorArray(m_PropNames[i], s_VectorList);
+                    NoAllocHelpers.ResetListContents(s_VectorList, (Vector4[])ArrayAllocatorManaged.Get(m_PropertyData.GetLocation(i)), m_PropertyData.GetSize(i) / UnsafeUtility.SizeOf<Vector4>());
+                    output.SetVectorArray(m_PropertyData.GetName(i), s_VectorList);
                 }
             }
         }
 
-        public unsafe void PropertyToBlock(int index, MaterialPropertyBlock output)
+        public void PropertyToBlock(int index, MaterialPropertyBlock output)
         {
             for (int i = 0; i < m_TextureNames.Length; i++)
             {
                 output.SetTexture(m_TextureNames[i], m_TextureValues[i]);
             }
 
-            for (int i = 0; i < m_PropNames.Length; i++)
+            for (int i = 0; i < m_PropertyData.Count; i++)
             {
-                ref var list = ref m_PropValues.ElementAt(i);
-                if (list.ArrayType == ArrayType.Float)
+                if (m_PropertyData.GetArrayType(i) == ArrayType.Float)
                 {
-                    output.SetFloat(m_PropNames[i], *(float*)(list.Ptr + index * sizeof(float)));
+                    output.SetFloat(m_PropertyData.GetName(i), *(float*)(m_PropertyData.GetPtr(i) + index * sizeof(float)));
                 }
                 else
                 {
-                    output.SetVector(m_PropNames[i], *(Vector4*)(list.Ptr + index * sizeof(Vector4)));
+                    output.SetVector(m_PropertyData.GetName(i), *(Vector4*)(m_PropertyData.GetPtr(i) + index * sizeof(Vector4)));
                 }
             }
         }

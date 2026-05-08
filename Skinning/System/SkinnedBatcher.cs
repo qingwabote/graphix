@@ -3,7 +3,6 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 using Unity.Rendering;
-using System;
 using UnityEngine;
 
 namespace Graphix
@@ -13,52 +12,9 @@ namespace Graphix
     [RequireMatchingQueriesForUpdate]
     public partial struct SkinnedBatcher : ISystem
     {
-        private readonly struct SkinnedBatchKey : IEquatable<SkinnedBatchKey>
-        {
-            public readonly int Skin;
+        private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
 
-            public SkinnedBatchKey(int skin)
-            {
-                Skin = skin;
-            }
-
-            public override int GetHashCode()
-            {
-                return Skin;
-            }
-
-            public bool Equals(SkinnedBatchKey other)
-            {
-                return Skin == other.Skin;
-            }
-        }
-
-        private readonly struct SkinnedBatchProgram : IBatchProgram<SkinnedBatchKey>
-        {
-            private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
-
-            public readonly int Skin;
-
-            public readonly UnityObjectRef<Texture> Texture;
-
-            public SkinnedBatchProgram(int skin, Texture texture)
-            {
-                Skin = skin;
-                Texture = texture;
-            }
-
-            public SkinnedBatchKey GetBatchKey()
-            {
-                return new SkinnedBatchKey(Skin);
-            }
-
-            public void OnBatchCreated(ref Batch batch)
-            {
-                batch.PropertyTextureBind(s_JOINTS, Texture);
-            }
-        }
-
-        private BatcherImpl<SkinnedBatchKey, SkinnedBatchProgram> m_Batcher;
+        private BatcherImpl m_Batcher;
 
         private Profile.Handle m_BatchHandle;
 
@@ -100,10 +56,15 @@ namespace Graphix
                         var mmb = mma[entity];
                         var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                         var skin = SkinInfos[entity];
-                        var program = new SkinnedBatchProgram(skin.Skin, skinArray.GetCurrentStore(skin).Texture);
+                        var texture = skinArray.GetCurrentStore(skin).Texture;
                         for (int i = 0; i < mmb.Length; i++)
                         {
-                            scope.Merge(ref queue, materialMeshArray, mmp[i], mp.GetData(entity), worlds.ElementAtRO(entity).Value, program);
+                            var length = queue.Length;
+                            scope.Merge(ref queue, materialMeshArray, mmp[i], mp.GetData(entity), worlds.ElementAtRO(entity).Value, skin.Skin);
+                            if (queue.Length != length)
+                            {
+                                queue.ElementAt(queue.Length - 1).PropertyTextureBind(s_JOINTS, texture);
+                            }
                         }
                     }
                 }
