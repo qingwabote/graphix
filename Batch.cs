@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Bastard;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -70,6 +72,9 @@ namespace Graphix
             list.Add(src, count);
         }
 
+        private static readonly List<float> s_FloatList = new();
+        private static readonly List<Vector4> s_VectorList = new();
+
         public void PropertyToBlock(MaterialPropertyBlock output)
         {
             for (int i = 0; i < m_TextureNames.Length; i++)
@@ -82,11 +87,13 @@ namespace Graphix
                 ref var list = ref m_PropValues.ElementAt(i);
                 if (list.ArrayType == ArrayType.Float)
                 {
-                    output.SetFloatArray(m_PropNames[i], (float[])ArrayAllocatorManaged.Get(list.Location));
+                    NoAllocHelpers.ResetListContents(s_FloatList, (float[])ArrayAllocatorManaged.Get(list.Location), list.Length / sizeof(float));
+                    output.SetFloatArray(m_PropNames[i], s_FloatList);
                 }
                 else
                 {
-                    output.SetVectorArray(m_PropNames[i], (Vector4[])ArrayAllocatorManaged.Get(list.Location));
+                    NoAllocHelpers.ResetListContents(s_VectorList, (Vector4[])ArrayAllocatorManaged.Get(list.Location), list.Length / UnsafeUtility.SizeOf<Vector4>());
+                    output.SetVectorArray(m_PropNames[i], s_VectorList);
                 }
             }
         }
