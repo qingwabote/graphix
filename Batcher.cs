@@ -1,5 +1,4 @@
 using Bastard;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Rendering;
@@ -21,7 +20,7 @@ namespace Graphix
             m_Batcher = new(Allocator.Persistent);
         }
 
-        [BurstCompile]
+        // [BurstCompile]
         public unsafe void OnUpdate(ref SystemState state)
         {
             if (m_BatchHandle.Entry == 0)
@@ -39,37 +38,46 @@ namespace Graphix
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
                 using var scope = m_Batcher.MakeScope();
-                // make MaterialMeshInfo and MaterialMeshInfoBuffered writable for WriteGroup
-                foreach (var chunk in SystemAPI.QueryBuilder().WithAnyRW<MaterialMeshInfo, MaterialMeshInfoBuffered>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
+
+                // make MaterialMeshInfo writable for WriteGroup
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAllRW<MaterialMeshInfo>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
                     ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
-                    var mp = new MaterialPropertyAccessor(ref state, chunk);
-                    var worlds = chunk.GetNativeArray(ref LocalToWorld);
+                    var chunkScope = scope.MakeChunk(ref queue);
 
-                    if (chunk.Has(ref MaterialMeshInfo))
+                    var mms = chunk.GetNativeArray(ref MaterialMeshInfo);
+                    for (int entity = 0; entity < chunk.Count; entity++)
                     {
-                        var mms = chunk.GetNativeArray(ref MaterialMeshInfo);
-                        for (ushort entity = 0; entity < chunk.Count; entity++)
+                        chunkScope.Record(materialMeshArray, mms[entity], entity);
+                    }
+
+                    chunkScope.Flush(ref state, in chunk, ref LocalToWorld);
+                }
+
+                // make MaterialMeshInfoBuffered writable for WriteGroup
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAllRW<MaterialMeshInfoBuffered>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
+                {
+                    var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
+                    ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
+                    var chunkScope = scope.MakeChunk(ref queue);
+
+                    var materialMeshAccessor = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
+
+                    for (int entity = 0; entity < chunk.Count; entity++)
+                    {
+                        var mmb = materialMeshAccessor[entity];
+                        var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
+                        for (int element = 0; element < mmb.Length; element++)
                         {
-                            scope.Merge(ref queue, materialMeshArray, mms[entity], mp.GetData(entity), worlds.ElementAtRO(entity).Value);
+                            chunkScope.Record(materialMeshArray, mmp[element], entity, element);
                         }
                     }
-                    else if (chunk.Has(ref MaterialMeshInfoBuffered))
-                    {
-                        var mma = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
-                        for (ushort entity = 0; entity < chunk.Count; entity++)
-                        {
-                            var mmb = mma[entity];
-                            var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
-                            for (ushort element = 0; element < mmb.Length; element++)
-                            {
-                                scope.Merge(ref queue, materialMeshArray, mmp[element], mp.GetData(entity, element), worlds.ElementAtRO(entity).Value);
-                            }
-                        }
-                    }
+
+                    chunkScope.Flush(ref state, in chunk, ref LocalToWorld);
                 }
             }
         }
+
     }
 }

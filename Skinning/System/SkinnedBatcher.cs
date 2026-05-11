@@ -42,31 +42,34 @@ namespace Graphix
                 var skinArray = SkinArray.GetCurrent(state.EntityManager);
 
                 using var scope = m_Batcher.MakeScope();
+
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfoBuffered, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
                     ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
+                    var chunkScope = scope.MakeChunk(ref queue);
 
-                    var mp = new MaterialPropertyAccessor(ref state, chunk);
-                    var mma = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
-                    var worlds = chunk.GetNativeArray(ref LocalToWorld);
+                    var materialMeshAccessor = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
+
                     var SkinInfos = chunk.GetNativeArray(ref SkinInfo);
-                    for (ushort entity = 0; entity < chunk.Count; entity++)
+                    for (int entity = 0; entity < chunk.Count; entity++)
                     {
-                        var mmb = mma[entity];
+                        var mmb = materialMeshAccessor[entity];
                         var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                         var skin = SkinInfos[entity];
                         var texture = skinArray.GetCurrentStore(skin).Texture;
                         for (int i = 0; i < mmb.Length; i++)
                         {
                             var length = queue.Length;
-                            scope.Merge(ref queue, materialMeshArray, mmp[i], mp.GetData(entity), worlds.ElementAtRO(entity).Value, skin.Skin);
+                            var batchIndex = chunkScope.Record(materialMeshArray, mmp[i], entity, i, skin.Skin);
                             if (queue.Length != length)
                             {
-                                queue.ElementAt(queue.Length - 1).PropertyTextureBind(s_JOINTS, texture);
+                                queue.ElementAt(batchIndex).PropertyTextureBind(s_JOINTS, texture);
                             }
                         }
                     }
+
+                    chunkScope.Flush(ref state, in chunk, ref LocalToWorld);
                 }
             }
         }

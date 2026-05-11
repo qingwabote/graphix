@@ -31,8 +31,7 @@ namespace Graphix
                 get => m_Count;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Add(int name, byte* src, int size, int instanceIndex, int instanceCapacity)
+            public int Ensure(int name, int size, int instanceCount, int instanceCapacity)
             {
                 var index = -1;
                 for (int i = 0; i < m_Count; i++)
@@ -63,12 +62,13 @@ namespace Graphix
                     Resize(index, instanceCapacity * size);
                 }
 
-                var padding = instanceIndex * size - GetSize(index);
+                var padding = instanceCount * size - GetSize(index);
                 if (padding > 0)
                 {
                     AddBytes(index, null, padding);
                 }
-                AddBytes(index, src, size);
+
+                return index;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -101,8 +101,7 @@ namespace Graphix
                 return (byte*)m_Ptrs[index];
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private void AddBytes(int index, byte* src, int count)
+            public void AddBytes(int index, byte* src, int count)
             {
                 var size = GetSize(index);
                 if (size + count > m_Capacities[index])
@@ -157,6 +156,7 @@ namespace Graphix
         public readonly int Mesh;
 
         public readonly int Count => LocalToWorlds.Length;
+        public readonly int Capacity => LocalToWorlds.Capacity;
         public readonly bool PropertyAcquired => m_PropertyData.Count > 0;
 
         public Batch(int capacity, int material, int mesh, AllocatorHandle allocator)
@@ -179,9 +179,16 @@ namespace Graphix
             m_TextureValues.Add(texture);
         }
 
-        public void PropertyDataAdd(int name, byte* src, int size, int capacity)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int PropertyDataEnsure(int name, int size, int capacity)
         {
-            m_PropertyData.Add(name, src, size, Count, capacity);
+            return m_PropertyData.Ensure(name, size, Count, capacity);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void PropertyDataAdd(int index, byte* src, int size)
+        {
+            m_PropertyData.AddBytes(index, src, size);
         }
 
         private static readonly List<float> s_FloatList = new();
