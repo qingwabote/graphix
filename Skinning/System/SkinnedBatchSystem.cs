@@ -10,13 +10,13 @@ namespace Graphix
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateInGroup(typeof(BatchGroup))]
     [RequireMatchingQueriesForUpdate]
-    public partial struct SkinnedBatcher : ISystem
+    public partial struct SkinnedBatchSystem : ISystem
     {
         private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
 
-        private BatcherImpl m_Batcher;
+        private Batcher m_Batcher;
 
-        private Profile.Handle m_BatchHandle;
+        private Profile.Handle m_Profile;
 
         public void OnCreate(ref SystemState state)
         {
@@ -25,12 +25,12 @@ namespace Graphix
 
         unsafe public void OnUpdate(ref SystemState state)
         {
-            if (m_BatchHandle.Entry == 0)
+            if (m_Profile.Entry == 0)
             {
-                m_BatchHandle = Profile.DefineEntry("SkinBatcher");
+                m_Profile = Profile.DefineEntry("SkinBatcher");
             }
 
-            using (m_BatchHandle.Auto())
+            using (m_Profile.Auto())
             {
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
@@ -41,13 +41,13 @@ namespace Graphix
 
                 var skinArray = SkinArray.GetCurrent(state.EntityManager);
 
-                using var scope = m_Batcher.MakeScope();
+                using var scope = m_Batcher.Auto();
 
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfoBuffered, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
                     ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
-                    var chunkScope = scope.MakeChunk(ref queue);
+                    using var batcher = scope.AutoChunk(ref queue, ref state, in chunk, ref LocalToWorld);
 
                     var materialMeshAccessor = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
 
@@ -61,15 +61,13 @@ namespace Graphix
                         for (int i = 0; i < mmb.Length; i++)
                         {
                             var length = queue.Length;
-                            var batchIndex = chunkScope.Record(materialMeshArray, mmp[i], entity, i, skin.Skin);
+                            var batchIndex = batcher.Add(materialMeshArray, mmp[i], entity, i, skin.Skin);
                             if (queue.Length != length)
                             {
                                 queue.ElementAt(batchIndex).PropertyTextureBind(s_JOINTS, texture);
                             }
                         }
                     }
-
-                    chunkScope.Flush(ref state, in chunk, ref LocalToWorld);
                 }
             }
         }

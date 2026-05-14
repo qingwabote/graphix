@@ -102,6 +102,11 @@ namespace Unity.Rendering
                 {
                     var material = batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material);
                     var mesh = batch.Mesh < 0 ? materialMeshArray.Meshes[-batch.Mesh] : s_Meshes.Get(batch.Mesh);
+                    if (material == null || mesh == null)
+                    {
+                        continue;
+                    }
+
                     if (material.enableInstancing)
                     {
                         s_MPB.Clear();
