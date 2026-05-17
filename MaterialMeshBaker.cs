@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace Graphix
 {
+#if UNITY_EDITOR
     [WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
     [RequireMatchingQueriesForUpdate]
     public partial struct MaterialMeshBaker : ISystem
@@ -19,7 +20,7 @@ namespace Graphix
             List<Mesh> meshes = new() { null };
 
             EntityCommandBuffer ecb = new(Allocator.Temp);
-            foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.FilterWriteGroup))
+            foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithNone<MaterialMeshBufferedBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.FilterWriteGroup))
             {
                 if (!material2index.TryGetValue(mm.Material, out var materialIndex))
                 {
@@ -80,4 +81,5 @@ namespace Graphix
             ecb.Playback(state.EntityManager);
         }
     }
+#endif
 }

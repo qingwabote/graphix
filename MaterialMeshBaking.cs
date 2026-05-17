@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Graphix
 {
+#if UNITY_EDITOR
     [BakingType]
     public class MaterialMeshBaking : IComponentData
     {
@@ -16,4 +17,5 @@ namespace Graphix
         public Material[] Materials;
         public Mesh[] Meshes;
     }
+#endif
 }

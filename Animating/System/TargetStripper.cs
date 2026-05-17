@@ -3,6 +3,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 
+#if UNITY_EDITOR
 [WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
 [UpdateInGroup(typeof(PostBakingSystemGroup))]
 public partial struct TargetStripper : ISystem
@@ -24,3 +25,4 @@ public partial struct TargetStripper : ISystem
         ecb.Playback(state.EntityManager);
     }
 }
+#endif

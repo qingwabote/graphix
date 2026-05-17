@@ -9,6 +9,7 @@ namespace Unity.Rendering
         public float4 Value;
     }
 
+#if UNITY_EDITOR
     [UnityEngine.DisallowMultipleComponent]
     public class URPMaterialPropertyBaseColorAuthoring : UnityEngine.MonoBehaviour
     {
@@ -31,4 +32,5 @@ namespace Unity.Rendering
             }
         }
     }
+#endif
 }

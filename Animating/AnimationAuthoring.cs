@@ -14,12 +14,13 @@ namespace Graphix
         public BlobAssetReference<Clip> Blob;
         public int TargetIndex;
     }
-
+#if UNITY_EDITOR
     class AnimationAuthoring : MonoBehaviour
     {
         public AnimationClip[] Clips;
         public int Index;
     }
+#endif
 
     public struct AnimationState : IComponentData
     {
@@ -27,6 +28,7 @@ namespace Graphix
         public float Time;
     }
 
+#if UNITY_EDITOR
     class AnimationBaker : Baker<AnimationAuthoring>
     {
         public override void Bake(AnimationAuthoring authoring)
@@ -60,4 +62,5 @@ namespace Graphix
             AddComponent(entity, new AnimationState { Index = authoring.Index });
         }
     }
+#endif
 }

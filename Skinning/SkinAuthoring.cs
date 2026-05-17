@@ -9,6 +9,7 @@ using UnityEngine;
 
 namespace Graphix
 {
+#if UNITY_EDITOR
     public class SkinAuthoring : MonoBehaviour
     {
         public Skin Skin;
@@ -22,6 +23,13 @@ namespace Graphix
         public bool Baking;
     }
 
+    [BakingType]
+    public struct TransformBaking : IBufferElementData
+    {
+        public LocalTransform Value;
+    }
+#endif
+
     [WriteGroup(typeof(MaterialMeshInfoBuffered))]
     public struct SkinInfo : IComponentData
     {
@@ -34,12 +42,6 @@ namespace Graphix
     {
         public Entity Target;
         public int Parent;
-    }
-
-    [BakingType]
-    public struct TransformBaking : IBufferElementData
-    {
-        public LocalTransform Value;
     }
 
     public unsafe struct JointSource : IComponentData
@@ -65,6 +67,7 @@ namespace Graphix
         public float Value;
     }
 
+#if UNITY_EDITOR
     class SkinBaker : Baker<SkinAuthoring>
     {
         public override void Bake(SkinAuthoring authoring)
@@ -129,4 +132,5 @@ namespace Graphix
             });
         }
     }
+#endif
 }

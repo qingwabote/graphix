@@ -4,6 +4,7 @@ using Unity.Entities;
 
 namespace Graphix
 {
+#if UNITY_EDITOR
     [WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
     [RequireMatchingQueriesForUpdate]
     public partial struct SkinInfoBaker : ISystem
@@ -43,4 +44,5 @@ namespace Graphix
             ecb.Playback(state.EntityManager);
         }
     }
+#endif
 }

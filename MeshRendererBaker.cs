@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Graphix
 {
+#if UNITY_EDITOR
     class MeshRendererBaker : Baker<MeshRenderer>
     {
         public override void Bake(MeshRenderer authoring)
@@ -16,5 +17,6 @@ namespace Graphix
             });
         }
     }
+#endif
 }
 

@@ -3,6 +3,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 
+#if UNITY_EDITOR
 [WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
 public partial struct NodeTransformBaker : ISystem
 {
@@ -36,3 +37,4 @@ public partial struct NodeTransformBaker : ISystem
         ecb.Playback(state.EntityManager);
     }
 }
+#endif
