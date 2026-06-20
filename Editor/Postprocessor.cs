@@ -183,20 +183,20 @@ namespace Graphix
             context.AddObjectToAsset($"Graphix_{animationClip.name}", animationClip);
         }
 
-        void OnPostprocessModel(GameObject gameObject)
+        void OnPostprocessModel(GameObject go)
         {
-            var skinnedRenderer = gameObject.GetComponentInChildren<UnityEngine.SkinnedMeshRenderer>();
-            if (skinnedRenderer)
+            var skinnedRenderers = go.GetComponentsInChildren<SkinnedMeshRenderer>();
+            if (skinnedRenderers.Length > 0)
             {
                 var skin = ScriptableObject.CreateInstance<Skin>();
                 skin.name = "Skin_0";
 
                 List<(string Path, int Location)> nodes = new();
                 {
-                    var joints = new (string Path, int Location)[skinnedRenderer.bones.Length];
+                    var joints = new (string Path, int Location)[skinnedRenderers[0].bones.Length];
                     for (int i = 0; i < joints.Length; i++)
                     {
-                        joints[i].Path = skinnedRenderer.bones[i].transform.RelativePath(gameObject.transform);
+                        joints[i].Path = skinnedRenderers[0].bones[i].transform.RelativePath(go.transform);
                         joints[i].Location = i;
                     }
                     Array.Sort(joints, (a, b) =>
@@ -239,7 +239,7 @@ namespace Graphix
                     skin.Nodes = nodes.Select(x => x.Path).ToArray();
                 }
 
-                var bindposes = skinnedRenderer.sharedMesh.GetBindposes();
+                var bindposes = skinnedRenderers[0].sharedMesh.GetBindposes();
 
                 var builder = new BlobBuilder(Allocator.Temp);
                 ref var meta = ref builder.ConstructRoot<JointMeta>();
@@ -256,11 +256,10 @@ namespace Graphix
                 skin.JointMeta = builder.CreateBlobAssetReference<JointMeta>(Allocator.Persistent);
 
 
-                var skinAuthoring = gameObject.AddComponent<SkinAuthoring>();
+                var skinAuthoring = go.AddComponent<SkinAuthoring>();
                 skinAuthoring.Skin = skin;
 
                 var materials = new Dictionary<Material, Material>();
-                var skinnedRenderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
                 foreach (var renderer in skinnedRenderers)
                 {
                     if (!materials.TryGetValue(renderer.sharedMaterial, out Material material))
@@ -281,5 +280,17 @@ namespace Graphix
                 context.AddObjectToAsset(skin.name, skin);
             }
         }
+
+        // void OnPostprocessPrefab(GameObject go)
+        // {
+        //     var skinnedRenderer = go.GetComponentInChildren<SkinnedMeshRenderer>();
+        //     if (skinnedRenderer && go.GetComponent<SkinAuthoring>() == null)
+        //     {
+        //         var path = AssetDatabase.GetAssetPath(skinnedRenderer.sharedMesh);
+        //         var skin = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Skin>().First();
+        //         var skinAuthoring = go.AddComponent<SkinAuthoring>();
+        //         skinAuthoring.Skin = skin;
+        //     }
+        // }
     }
 }
