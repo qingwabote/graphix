@@ -6,6 +6,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using UnityEngine;
+using Unity.Mathematics;
 
 namespace Graphix
 {
@@ -88,18 +89,9 @@ namespace Graphix
         public Skin[] Data;
 
         [SerializeField]
-        private int m_HashCode;
-
-        [SerializeField]
         private RuntimeData m_RuntimeData;
 
-        internal SkinArray(Skin[] data, int hashCode)
-        {
-            Data = data;
-            m_HashCode = hashCode;
-
-            m_RuntimeData = new RuntimeData();
-        }
+        public uint4 Hash128;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Store GetCurrentStore(SkinInfo info)
@@ -109,12 +101,41 @@ namespace Graphix
 
         public override int GetHashCode()
         {
-            return m_HashCode;
+            return (int)Hash128.x;
         }
 
         public bool Equals(SkinArray other)
         {
-            return m_HashCode == other.m_HashCode;
+            return math.all(Hash128 == other.Hash128);
         }
+
+#if UNITY_EDITOR
+        internal SkinArray(Skin[] data)
+        {
+            Data = data;
+            m_RuntimeData = new RuntimeData();
+
+            Hash128 = uint4.zero;
+            Hash128 = ComputeHash128();
+        }
+
+        private uint4 ComputeHash128()
+        {
+            var hash = new xxHash3.StreamingState(false);
+
+            hash.Update(Data.Length);
+
+            for (int i = 0; i < Data.Length; ++i)
+                AssetHash.Update(ref hash, Data[i]);
+
+            uint4 H = hash.DigestHash128();
+
+            // Make sure the hash is never exactly zero, to keep zero as a null value
+            if (math.all(H == uint4.zero))
+                return new uint4(1, 0, 0, 0);
+
+            return H;
+        }
+#endif
     }
 }

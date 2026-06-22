@@ -69,12 +69,9 @@ namespace Graphix
                 }
             }
 
-            List<SceneSection> scenes = new();
-            state.EntityManager.GetAllUniqueSharedComponentsManaged(scenes);
-
             ecb.AddSharedComponentManaged(
                 SystemAPI.QueryBuilder().WithAny<MaterialMeshBaking, MaterialMeshBufferedBaking>().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities).Build(),
-                new MaterialMeshArray(materials.ToArray(), meshes.ToArray(), scenes[1].SceneGUID.GetHashCode()),
+                new MaterialMeshArray(materials.ToArray(), meshes.ToArray()),
                 EntityQueryCaptureMode.AtPlayback
             );
 
