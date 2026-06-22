@@ -77,15 +77,6 @@ namespace Graphix
             }
         }
 
-        static private List<SkinArray> s_Instances = new();
-
-        static public SkinArray GetCurrent(EntityManager entityManager)
-        {
-            s_Instances.Clear();
-            entityManager.GetAllUniqueSharedComponentsManaged(s_Instances);
-            return s_Instances[1];
-        }
-
         public Skin[] Data;
 
         [SerializeField]

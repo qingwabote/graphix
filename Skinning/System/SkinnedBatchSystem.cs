@@ -36,15 +36,15 @@ namespace Graphix
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
                 var MaterialMeshArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<MaterialMeshArray>();
+                var SkinArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<SkinArray>();
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
-
-                var skinArray = SkinArray.GetCurrent(state.EntityManager);
 
                 using var scope = m_Batcher.Auto();
 
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfoBuffered, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
+                    var skinArray = chunk.GetSharedComponentManaged(SkinArray, state.EntityManager);
                     var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
                     ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
                     using var batcher = scope.AutoChunk(ref queue, ref state, in chunk, ref LocalToWorld);

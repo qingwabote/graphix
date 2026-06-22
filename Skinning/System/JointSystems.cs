@@ -60,11 +60,11 @@ namespace Graphix
                 var JointSource = SystemAPI.GetComponentTypeHandle<JointSource>(false);
                 var JointOffset = SystemAPI.GetComponentTypeHandle<JointOffset>(false);
                 var ChannelTarget = SystemAPI.GetBufferTypeHandle<ChannelTarget>(false);
+                var SkinArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<SkinArray>();
 
-                var skinArray = SkinArray.GetCurrent(state.EntityManager);
-
-                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<SkinInfo>().Build().ToArchetypeChunkArray(Allocator.Temp))
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
+                    var skinArray = chunk.GetSharedComponentManaged(SkinArray, state.EntityManager);
                     NativeArray<SkinInfo> infos = chunk.GetNativeArray(ref SkinInfo);
                     NativeArray<JointSource> sources = chunk.GetNativeArray(ref JointSource);
                     NativeArray<JointOffset> offsets = chunk.GetNativeArray(ref JointOffset);
@@ -208,10 +208,17 @@ namespace Graphix
 
             using (m_ProfileHandle.Auto())
             {
-                var skinArray = SkinArray.GetCurrent(state.EntityManager);
-                foreach (var info in SystemAPI.Query<SkinInfo>())
+                var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
+                var SkinArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<SkinArray>();
+
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
-                    skinArray.GetCurrentStore(info).Update();
+                    var skinArray = chunk.GetSharedComponentManaged(SkinArray, state.EntityManager);
+                    var infos = chunk.GetNativeArray(ref SkinInfo);
+                    for (int i = 0; i < chunk.Count; i++)
+                    {
+                        skinArray.GetCurrentStore(infos[i]).Update();
+                    }
                 }
             }
         }
