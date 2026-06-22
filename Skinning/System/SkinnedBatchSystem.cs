@@ -57,14 +57,15 @@ namespace Graphix
                         var mmb = materialMeshAccessor[entity];
                         var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                         var skin = SkinInfos[entity];
-                        var texture = skinArray.GetCurrentStore(skin).Texture;
+                        var store = skinArray.GetCurrentStore(skin);
                         for (int i = 0; i < mmb.Length; i++)
                         {
                             var length = queue.Length;
                             var batchIndex = batcher.Add(materialMeshArray, mmp[i], entity, i, skin.Skin);
                             if (queue.Length != length)
                             {
-                                queue.ElementAt(batchIndex).PropertyTextureBind(s_JOINTS, texture);
+                                store.Update();
+                                queue.ElementAt(batchIndex).PropertyTextureBind(s_JOINTS, store.Texture);
                             }
                         }
                     }

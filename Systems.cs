@@ -19,11 +19,6 @@ namespace Graphix
     [UpdateAfter(typeof(AnimationSamplerGroup))]
     public partial struct JointUpdater : ISystem { }
 
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateAfter(typeof(JointUpdater))]
-    public partial struct JointUploader : ISystem { }
-
-
     [UpdateAfter(typeof(TransformSystemGroup))]
     public partial struct Freezer : ISystem { }
 

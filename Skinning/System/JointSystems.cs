@@ -188,39 +188,4 @@ namespace Graphix
         }
     }
 
-    public partial struct JointUploader : ISystem
-    {
-        private Profile.Handle m_ProfileHandle;
-
-        public void OnCreate(ref SystemState state)
-        {
-            state.RequireForUpdate<SkinInfo>();
-            state.RequireForUpdate<SkinArray>();
-
-        }
-
-        public void OnUpdate(ref SystemState state)
-        {
-            if (m_ProfileHandle.Entry == 0)
-            {
-                m_ProfileHandle = Profile.DefineEntry("JointUpload");
-            }
-
-            using (m_ProfileHandle.Auto())
-            {
-                var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
-                var SkinArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<SkinArray>();
-
-                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
-                {
-                    var skinArray = chunk.GetSharedComponentManaged(SkinArray, state.EntityManager);
-                    var infos = chunk.GetNativeArray(ref SkinInfo);
-                    for (int i = 0; i < chunk.Count; i++)
-                    {
-                        skinArray.GetCurrentStore(infos[i]).Update();
-                    }
-                }
-            }
-        }
-    }
 }
