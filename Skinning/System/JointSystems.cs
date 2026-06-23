@@ -1,4 +1,3 @@
-using System;
 using Bastard;
 using Unity.Burst;
 using Unity.Collections;
@@ -11,32 +10,6 @@ namespace Graphix
 {
     public partial struct JointAllocator : ISystem
     {
-        private readonly struct ClipFrame : IEquatable<ClipFrame>
-        {
-            private readonly int m_skin;
-            private readonly BlobAssetReference<Clip> m_Clip;
-            private readonly int m_Frame;
-
-            public ClipFrame(int skin, BlobAssetReference<Clip> clip, int frame)
-            {
-                m_skin = skin;
-                m_Clip = clip;
-                m_Frame = frame;
-            }
-
-            public override int GetHashCode()
-            {
-                return Bastard.HashCode.Combine(m_skin, m_Clip.GetHashCode(), m_Frame);
-            }
-
-            public bool Equals(ClipFrame other)
-            {
-                return m_skin == other.m_skin && m_Clip == other.m_Clip && m_Frame == other.m_Frame;
-            }
-        }
-
-        private static readonly NativeHashMap<ClipFrame, int> s_ClipFrameOffsets = new(1024, Allocator.Persistent);
-
         private Profile.Handle m_ProfileHandle;
 
         public void OnCreate(ref SystemState state)
@@ -84,19 +57,19 @@ namespace Graphix
 
                         int offset = -1;
                         bool baked = false;
-                        ClipFrame key = new(info.Skin, default, -1);
+                        BlobAssetReference<Clip> clip = default;
+                        int frame = -1;
                         if (info.Baking)
                         {
                             if (animated)
                             {
                                 var anim = animations[i];
-                                var clip = clips[i][anim.Index];
-                                var duration = clip.Blob.Value.Duration;
+                                clip = clips[i][anim.Index].Blob;
+                                var duration = clip.Value.Duration;
                                 var ratio = anim.Time / duration;
-                                var frame = (int)math.ceil(ratio * (duration * 60 - 1));
-                                key = new ClipFrame(info.Skin, clip.Blob, frame);
+                                frame = (int)math.ceil(ratio * (duration * 60 - 1));
                             }
-                            baked = s_ClipFrameOffsets.TryGetValue(key, out offset);
+                            baked = skinArray.GetOffset(info, clip, frame, out offset);
                         }
                         if (!baked)
                         {
@@ -109,7 +82,7 @@ namespace Graphix
 
                             if (info.Baking)
                             {
-                                s_ClipFrameOffsets.Add(key, offset);
+                                skinArray.SetOffset(info, clip, frame, offset);
                             }
                         }
                         offsets[i] = new JointOffset { Value = offset };

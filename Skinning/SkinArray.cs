@@ -1,6 +1,5 @@
 using System;
 using Bastard;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -14,12 +13,58 @@ namespace Graphix
     {
         internal class RuntimeData
         {
+            private readonly struct ClipFrame : IEquatable<ClipFrame>
+            {
+                private readonly int m_Skin;
+                private readonly BlobAssetReference<Clip> m_Clip;
+                private readonly int m_Frame;
+
+                public ClipFrame(int skin, BlobAssetReference<Clip> clip, int frame)
+                {
+                    m_Skin = skin;
+                    m_Clip = clip;
+                    m_Frame = frame;
+                }
+
+                public override int GetHashCode()
+                {
+                    return Bastard.HashCode.Combine(m_Skin, m_Clip.GetHashCode(), m_Frame);
+                }
+
+                public bool Equals(ClipFrame other)
+                {
+                    return m_Skin == other.m_Skin && m_Clip == other.m_Clip && m_Frame == other.m_Frame;
+                }
+            }
+
             private Store[] m_Persistent;
             private TransientStore[] m_Transient;
+            private NativeHashMap<ClipFrame, int> m_Offsets;
 
             public Store GetCurrentStore(Skin[] skins, SkinInfo info)
             {
                 return info.Baking ? GetPersistent(skins, info.Skin) : GetTransient(skins, info.Skin);
+            }
+
+            public bool GetOffset(SkinInfo info, BlobAssetReference<Clip> clip, int frame, out int offset)
+            {
+                if (!m_Offsets.IsCreated)
+                {
+                    offset = default;
+                    return false;
+                }
+
+                return m_Offsets.TryGetValue(new ClipFrame(info.Skin, clip, frame), out offset);
+            }
+
+            public void SetOffset(SkinInfo info, BlobAssetReference<Clip> clip, int frame, int offset)
+            {
+                if (!m_Offsets.IsCreated)
+                {
+                    m_Offsets = new NativeHashMap<ClipFrame, int>(1024, Allocator.Persistent);
+                }
+
+                m_Offsets.Add(new ClipFrame(info.Skin, clip, frame), offset);
             }
 
             private Store GetPersistent(Skin[] skins, int index)
@@ -88,6 +133,18 @@ namespace Graphix
         public Store GetCurrentStore(SkinInfo info)
         {
             return m_RuntimeData.GetCurrentStore(Data, info);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool GetOffset(SkinInfo info, BlobAssetReference<Clip> clip, int frame, out int offset)
+        {
+            return m_RuntimeData.GetOffset(info, clip, frame, out offset);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetOffset(SkinInfo info, BlobAssetReference<Clip> clip, int frame, int offset)
+        {
+            m_RuntimeData.SetOffset(info, clip, frame, offset);
         }
 
         public override int GetHashCode()
