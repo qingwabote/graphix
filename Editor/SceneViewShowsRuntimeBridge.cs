@@ -5,7 +5,7 @@ using Unity.Scenes.Editor;
 
 namespace Graphix.Editor
 {
-    [WorldSystemFilter(WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     [UpdateBefore(typeof(EntitiesGraphicsSystem))]
     public partial struct SceneViewShowsRuntimeBridge : ISystem
