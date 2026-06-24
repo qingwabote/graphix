@@ -8,7 +8,8 @@
         "Unity.Entities.Hybrid",
         "Unity.Collections",
         "Unity.Mathematics",
-        "Bastard"
+        "Bastard",
+        "Bastard.Editor"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
