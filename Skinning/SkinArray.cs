@@ -157,16 +157,18 @@ namespace Graphix
             return math.all(Hash128 == other.Hash128);
         }
 
-#if UNITY_EDITOR
         internal SkinArray(Skin[] data)
         {
             Data = data;
             m_RuntimeData = new RuntimeData();
 
             Hash128 = uint4.zero;
+#if UNITY_EDITOR
             Hash128 = ComputeHash128();
+#endif
         }
 
+#if UNITY_EDITOR
         private uint4 ComputeHash128()
         {
             var hash = new xxHash3.StreamingState(false);
