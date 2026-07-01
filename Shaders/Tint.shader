@@ -9,8 +9,6 @@ Shader "Graphix/Tint"
 
         _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
 
-		_RimAmount("Rim Amount", Range(0, 1)) = 0.716
-
         [Toggle] _SKINNING ("Enable Vertex Skinning", Float) = 0
 
         [Toggle] _INSTANCED_BASECOLOR ("Enable Base Color Instancing", Float) = 0
@@ -78,8 +76,6 @@ Shader "Graphix/Tint"
                 half4 _BaseColor;
             #endif
                 half _Smoothness;
-
-			half _RimAmount;
 
             half4 _TintColor1;
             half4 _TintColor2;
@@ -158,7 +154,7 @@ Shader "Graphix/Tint"
 				// so multiply it by NdotL, raised to a power to smoothly blend it.
 				// half rim = (1 - dot(viewDir, normal)) * pow(NdotL, 0.1);
                 half rim = (1 - dot(viewDir, normal)) * step(0.001, NdotL);
-				rim = step(_RimAmount, rim);
+				rim = step(0.716, rim);
 
                 // https://discussions.unity.com/t/get-ambient-color-in-custom-shader/814307/3
                 return half4(diffuse + specular + half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w) + rim, 1.0);
