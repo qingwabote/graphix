@@ -9,6 +9,8 @@ Shader "Graphix/Tint"
 
         _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
 
+		_RimAmount("Rim Amount", Range(0, 1)) = 0.716
+
         [Toggle] _SKINNING ("Enable Vertex Skinning", Float) = 0
 
         [Toggle] _INSTANCED_BASECOLOR ("Enable Base Color Instancing", Float) = 0
@@ -25,6 +27,8 @@ Shader "Graphix/Tint"
 
         Pass
         {
+            Tags { "LightMode" = "UniversalForward" }
+
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -75,6 +79,8 @@ Shader "Graphix/Tint"
             #endif
                 half _Smoothness;
 
+			half _RimAmount;
+
             half4 _TintColor1;
             half4 _TintColor2;
             half4 _TintColor3;
@@ -107,17 +113,11 @@ Shader "Graphix/Tint"
                 half4 albedo;
             };
 
-            half3 LightingLambert(half3 lightColor, half3 lightDir, half3 normal)
-            {
-                half NdotL = saturate(dot(normal, lightDir));
-                return lightColor * NdotL;
-            }
-
             half3 LightingSpecular(half3 lightColor, half3 lightDir, half3 normal, half3 viewDir, half4 specular, half smoothness)
             {
-                float3 halfVec = SafeNormalize(float3(lightDir) + float3(viewDir));
-                half NdotH = half(saturate(dot(normal, halfVec)));
-                half modifier = pow(float(NdotH), float(smoothness)); // Half produces banding, need full precision
+                float3 halfVec = SafeNormalize(lightDir + viewDir);
+                half NdotH = saturate(dot(normal, halfVec));
+                half modifier = smoothstep(0.005, 0.01, pow(float(NdotH), float(smoothness))); // Half produces banding, need full precision
                 // NOTE: In order to fix internal compiler error on mobile platforms, this needs to be float3
                 float3 specularReflection = specular.rgb * modifier;
                 return lightColor * specularReflection;
@@ -145,13 +145,23 @@ Shader "Graphix/Tint"
 
             half4 CalculateLighting(float3 position, half3 normal)
             {
+                // https://roystan.net/articles/toon-shader/
+
                 Light light = GetMainLight();
-                half3 diffuse = LightingLambert(light.color, light.direction, normal);
+                half NdotL = saturate(dot(normal, light.direction));
+                half3 diffuse = light.color * smoothstep(0, 0.01, NdotL); 
                 half3 viewDir = GetWorldSpaceNormalizeViewDir(position);
                 half3 specular = LightingSpecular(light.color, light.direction, normal, viewDir, half4(0.5, 0.5, 0.5, 1.0), exp2(10 * _Smoothness + 1));
 
+                // Calculate rim lighting.
+				// We only want rim to appear on the lit side of the surface,
+				// so multiply it by NdotL, raised to a power to smoothly blend it.
+				// half rim = (1 - dot(viewDir, normal)) * pow(NdotL, 0.1);
+                half rim = (1 - dot(viewDir, normal)) * step(0.001, NdotL);
+				rim = smoothstep(_RimAmount - 0.01, _RimAmount + 0.01, rim);
+
                 // https://discussions.unity.com/t/get-ambient-color-in-custom-shader/814307/3
-                return half4(diffuse + specular + half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w), 1.0);
+                return half4(diffuse + specular + half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w) + rim, 1.0);
             }
 
             #include "Packages/graphix/Shaders/Includes/Pass.hlsl"
