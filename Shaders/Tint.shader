@@ -117,7 +117,7 @@ Shader "Graphix/Tint"
             {
                 float3 halfVec = SafeNormalize(lightDir + viewDir);
                 half NdotH = saturate(dot(normal, halfVec));
-                half modifier = smoothstep(0.005, 0.01, pow(float(NdotH), float(smoothness))); // Half produces banding, need full precision
+                half modifier = step(0.01, pow(float(NdotH), float(smoothness))); // Half produces banding, need full precision
                 // NOTE: In order to fix internal compiler error on mobile platforms, this needs to be float3
                 float3 specularReflection = specular.rgb * modifier;
                 return lightColor * specularReflection;
@@ -149,7 +149,7 @@ Shader "Graphix/Tint"
 
                 Light light = GetMainLight();
                 half NdotL = saturate(dot(normal, light.direction));
-                half3 diffuse = light.color * smoothstep(0, 0.01, NdotL); 
+                half3 diffuse = light.color * step(0.01, NdotL); 
                 half3 viewDir = GetWorldSpaceNormalizeViewDir(position);
                 half3 specular = LightingSpecular(light.color, light.direction, normal, viewDir, half4(0.5, 0.5, 0.5, 1.0), exp2(10 * _Smoothness + 1));
 
@@ -158,7 +158,7 @@ Shader "Graphix/Tint"
 				// so multiply it by NdotL, raised to a power to smoothly blend it.
 				// half rim = (1 - dot(viewDir, normal)) * pow(NdotL, 0.1);
                 half rim = (1 - dot(viewDir, normal)) * step(0.001, NdotL);
-				rim = smoothstep(_RimAmount - 0.01, _RimAmount + 0.01, rim);
+				rim = step(_RimAmount, rim);
 
                 // https://discussions.unity.com/t/get-ambient-color-in-custom-shader/814307/3
                 return half4(diffuse + specular + half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w) + rim, 1.0);
