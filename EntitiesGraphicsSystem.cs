@@ -43,8 +43,6 @@ namespace Unity.Rendering
 
         private static readonly MaterialPropertyBlock s_MPB = new();
 
-        private static readonly Profile.Handle s_Graphics = Profile.DefineEntry("Graphics");
-
         static EntitiesGraphicsSystem()
         {
             s_Materials = new();
@@ -72,8 +70,6 @@ namespace Unity.Rendering
 
         protected override void OnUpdate()
         {
-            using var scope = s_Graphics.Auto();
-
             int batchCount = 0;
             int instanceCount = 0;
             Camera camera = null;
