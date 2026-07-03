@@ -17,6 +17,7 @@ Shader "Graphix/Tint"
         _TintColor1("Tint Color 1", Color) = (1, 1, 1, 1)
         _TintColor2("Tint Color 2", Color) = (1, 1, 1, 1)
         _TintColor3("Tint Color 3", Color) = (1, 1, 1, 1)
+        [Toggle] _INSTANCED_TINTCOLOR ("Enable Tint Color Instancing", Float) = 0
 
     }
     SubShader
@@ -35,6 +36,7 @@ Shader "Graphix/Tint"
             #pragma shader_feature_local _SKINNING_ON
 
             #pragma shader_feature_local _INSTANCED_BASECOLOR_ON
+            #pragma shader_feature_local _INSTANCED_TINTCOLOR_ON
 
             #pragma multi_compile_instancing
             #pragma instancing_options assumeuniformscaling
@@ -73,21 +75,27 @@ Shader "Graphix/Tint"
 
             CBUFFER_START(UnityPerMaterial)
             #if !defined(_INSTANCED_BASECOLOR_ON)
-                half4 _BaseColor;
+            half4 _BaseColor;
             #endif
-                half _Smoothness;
-
+            #if !defined(_INSTANCED_TINTCOLOR_ON)
             half4 _TintColor1;
             half4 _TintColor2;
             half4 _TintColor3;
+            #endif
+            half _Smoothness;
             CBUFFER_END
 
             UNITY_INSTANCING_BUFFER_START(PerInstance)
             #if defined(_INSTANCED_BASECOLOR_ON)
-                UNITY_DEFINE_INSTANCED_PROP(half4, _BaseColor)
+            UNITY_DEFINE_INSTANCED_PROP(half4, _BaseColor)
             #endif
             #if defined(_SKINNING_ON)
-                UNITY_DEFINE_INSTANCED_PROP(float, _JointOffset)
+            UNITY_DEFINE_INSTANCED_PROP(float, _JointOffset)
+            #endif
+            #if defined(_INSTANCED_TINTCOLOR_ON)
+            UNITY_DEFINE_INSTANCED_PROP(half4, _TintColor1)
+            UNITY_DEFINE_INSTANCED_PROP(half4, _TintColor2)
+            UNITY_DEFINE_INSTANCED_PROP(half4, _TintColor3)
             #endif
             UNITY_INSTANCING_BUFFER_END(PerInstance)
 
@@ -130,8 +138,17 @@ Shader "Graphix/Tint"
                 albedo *= SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv);
                 #endif
 
-                float4 mask = SAMPLE_TEXTURE2D(_TintMask, sampler_TintMask, uv);
-                float4 color = min(mask.r, _TintColor1) + min(mask.g, _TintColor2) + min(mask.b, _TintColor3);
+                half4 mask = SAMPLE_TEXTURE2D(_TintMask, sampler_TintMask, uv);
+                #if defined(_INSTANCED_TINTCOLOR_ON)
+                    half4 color1 = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _TintColor1);
+                    half4 color2 = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _TintColor2);
+                    half4 color3 = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _TintColor3);
+                #else
+                    half4 color1 = _TintColor1;
+                    half4 color2 = _TintColor2;
+                    half4 color3 = _TintColor3;
+                #endif
+                half4 color = min(mask.r, color1) + min(mask.g, color2) + min(mask.b, color3);
                 albedo = lerp(albedo, color * albedo, mask.r + mask.g + mask.b);
 
                 Surface surface;
