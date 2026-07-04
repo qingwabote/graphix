@@ -10,15 +10,13 @@ Shader "Graphix/Unlit"
         // Blend One Zero with BlendOp Add == Blend Off "When we see Blend One Zero with BlendOp Add, we turn blending off." https://discussions.unity.com/t/is-there-extra-performance-cost-for-blend-one-zero/851542/2
         [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("Src Blend", Float) = 1
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend("Dst Blend", Float) = 0
-        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlendAlpha("Src Blend Alpha", Float) = 1
-        [Enum(UnityEngine.Rendering.BlendMode)] _DstBlendAlpha("Dst Blend Alpha", Float) = 0
         [Enum(Off, 0, On, 1)] _ZWrite("ZWrite", Float) = 1
     }
     SubShader
     {
         Tags { "RenderPipeline" = "UniversalPipeline" }
 
-        Blend [_SrcBlend][_DstBlend], [_SrcBlendAlpha][_DstBlendAlpha]
+        Blend [_SrcBlend][_DstBlend]
         ZWrite [_ZWrite]
 
         Pass
