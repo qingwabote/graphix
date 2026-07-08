@@ -22,10 +22,10 @@ namespace Unity.Rendering
             {
                 Unity.Rendering.URPMaterialPropertyBaseColor component = default(Unity.Rendering.URPMaterialPropertyBaseColor);
                 float4 colorValues;
-                colorValues.x = authoring.color.linear.r;
-                colorValues.y = authoring.color.linear.g;
-                colorValues.z = authoring.color.linear.b;
-                colorValues.w = authoring.color.linear.a;
+                colorValues.x = authoring.color.r;
+                colorValues.y = authoring.color.g;
+                colorValues.z = authoring.color.b;
+                colorValues.w = authoring.color.a;
                 component.Value = colorValues;
                 var entity = GetEntity(TransformUsageFlags.Renderable);
                 AddComponent(entity, component);
