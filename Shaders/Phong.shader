@@ -4,7 +4,6 @@ Shader "Graphix/Phong"
     {
         _BaseColor("Base Color", Color) = (1, 1, 1, 1)
 
-        [Toggle] _BASEMAP ("Enable Base Map", Float) = 0
         _BaseMap("Base Map", 2D) = "white" {}
 
         _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
@@ -23,7 +22,6 @@ Shader "Graphix/Phong"
             #pragma vertex vert
             #pragma fragment frag
 
-            #pragma shader_feature_local _BASEMAP_ON
             #pragma shader_feature_local _SKINNING_ON
 
             #pragma shader_feature_local _INSTANCED_BASECOLOR_ON
@@ -39,9 +37,7 @@ Shader "Graphix/Phong"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
-                #if defined(_BASEMAP_ON)
                 float2 texcoord : TEXCOORD0;
-                #endif
 
                 #if defined(_SKINNING_ON)
                 uint4 indices : BLENDINDICES;
@@ -53,9 +49,7 @@ Shader "Graphix/Phong"
 
             struct Varyings
             {
-                #if defined(_BASEMAP_ON)
                 float2 uv : TEXCOORD0;
-                #endif
                 float3 positionWS : TEXCOORD1;
                 half3 normalWS : TEXCOORD2;
                 float4 positionHCS : SV_POSITION;
@@ -79,62 +73,28 @@ Shader "Graphix/Phong"
             #endif
             UNITY_INSTANCING_BUFFER_END(PerInstance)
 
-            #if defined(_BASEMAP_ON)
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
-            #endif
 
             #if defined(_SKINNING_ON)
             TEXTURE2D(_JointMap);
             float4 _JointMap_TexelSize;
             #endif
 
-            struct Surface
+            half4 CalculateSurface(half4 color, float2 uv)
             {
-                half4 albedo;
+                return color;
+            }
+
+            struct Lighting
+            {
+                half NdotL;
+                half specular;
             };
 
-            half3 LightingLambert(half3 lightColor, half3 lightDir, half3 normal)
+            half3 CalculateLighting(Lighting lighting, half3 color, half3 V, half3 N)
             {
-                half NdotL = saturate(dot(normal, lightDir));
-                return lightColor * NdotL;
-            }
-
-            half3 LightingSpecular(half3 lightColor, half3 lightDir, half3 normal, half3 viewDir, half4 specular, half smoothness)
-            {
-                float3 halfVec = SafeNormalize(float3(lightDir) + float3(viewDir));
-                half NdotH = half(saturate(dot(normal, halfVec)));
-                half modifier = pow(float(NdotH), float(smoothness)); // Half produces banding, need full precision
-                // NOTE: In order to fix internal compiler error on mobile platforms, this needs to be float3
-                float3 specularReflection = specular.rgb * modifier;
-                return lightColor * specularReflection;
-            }
-
-            Surface CalculateSurface(float2 uv)
-            {
-                #if defined(_INSTANCED_BASECOLOR_ON)
-                    half4 color = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _BaseColor);
-                #else
-                    half4 color = _BaseColor;
-                #endif
-                #if defined(_BASEMAP_ON)
-                color *= SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv);
-                #endif
-
-                Surface surface;
-                surface.albedo = color;
-                return surface;
-            }
-
-            half4 CalculateLighting(float3 position, half3 normal)
-            {
-                Light light = GetMainLight();
-                half3 diffuse = LightingLambert(light.color, light.direction, normal);
-                half3 viewDir = GetWorldSpaceNormalizeViewDir(position);
-                half3 specular = LightingSpecular(light.color, light.direction, normal, viewDir, half4(0.5, 0.5, 0.5, 1.0), exp2(10 * _Smoothness + 1));
-
-                // https://discussions.unity.com/t/get-ambient-color-in-custom-shader/814307/3
-                return half4(diffuse + specular + half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w), 1.0);
+                return (lighting.NdotL + lighting.specular * 0.5 /* specular color */) * color + half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
             }
 
             #include "Packages/graphix/Shaders/Includes/Pass.hlsl"

@@ -15,9 +15,7 @@ Varyings vert (Attributes input)
     #endif
     float3 positionWS = TransformObjectToWorld(positionOS);
 
-    #if defined(_BASEMAP_ON)
     output.uv = input.texcoord;
-    #endif
     output.positionWS = positionWS;
     output.normalWS = TransformObjectToWorldNormal(input.normalOS);
     output.positionHCS = TransformWorldToHClip(positionWS);
@@ -28,13 +26,22 @@ float4 frag (Varyings input) : SV_Target
 {
     UNITY_SETUP_INSTANCE_ID(input);
 
-    Surface surface = CalculateSurface(
-        #if defined(_BASEMAP_ON)
-        input.uv
-        #else
-            0
-        #endif
-        );
+    #if defined(_INSTANCED_BASECOLOR_ON)
+        half4 color = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _BaseColor);
+    #else
+        half4 color = _BaseColor;
+    #endif
+    color *= SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
 
-    return surface.albedo * CalculateLighting(input.positionWS, input.normalWS);
+    half4 albedo = CalculateSurface(color, input.uv);
+
+    Lighting lighting;
+    Light light = GetMainLight();
+    lighting.NdotL = saturate(dot(input.normalWS, light.direction));
+    half3 V = GetWorldSpaceNormalizeViewDir(input.positionWS);
+    float3 H = SafeNormalize(float3(light.direction) + float3(V));
+    half NdotH = saturate(dot(input.normalWS, H));
+    lighting.specular = pow(float(NdotH), float(exp2(10 * _Smoothness + 1))); // Half produces banding, need full precision
+
+    return albedo * half4(CalculateLighting(lighting, light.color, V, input.normalWS), 1.0);
 }
