@@ -14,7 +14,7 @@ Shader "Graphix/Phong"
     }
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
+        Tags { "RenderPipeline" = "UniversalPipeline" }
 
         Pass
         {
