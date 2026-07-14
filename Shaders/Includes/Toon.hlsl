@@ -21,7 +21,7 @@ half3 CalculateLighting(Lighting lighting, half3 color, half3 V, half3 N)
     half rim = (1 - dot(V, N)) * step(0.001, lighting.NdotL);
     rim = step(0.716, rim);
 
-    return (diffuse + specular * 0.5 /* specular color */) * color + half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w) + rim;
+    return (max(diffuse, 0.35) + specular * 0.5 /* specular color */) * color + rim;
 }
 
 #endif
