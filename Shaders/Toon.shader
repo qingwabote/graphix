@@ -11,6 +11,9 @@ Shader "Graphix/Toon"
         [Toggle] _SKINNING ("Enable Vertex Skinning", Float) = 0
 
         [Toggle] _INSTANCED_BASECOLOR ("Enable Base Color Instancing", Float) = 0
+
+        _DissolveMap("Dissolve Map", 2D) = "white" {}
+		_DissolveScale("Dissolve Scale", Float) = 1
     }
     SubShader
     {
@@ -63,7 +66,6 @@ Shader "Graphix/Toon"
             #endif
                 half _Smoothness;
                 half _DissolveScale;
-                half _Dissolve;
             CBUFFER_END
 
             UNITY_INSTANCING_BUFFER_START(PerInstance)
@@ -73,6 +75,7 @@ Shader "Graphix/Toon"
             #if defined(_SKINNING_ON)
                 UNITY_DEFINE_INSTANCED_PROP(float, _JointOffset)
             #endif
+            UNITY_DEFINE_INSTANCED_PROP(half, _Dissolve)
             UNITY_INSTANCING_BUFFER_END(PerInstance)
 
             TEXTURE2D(_BaseMap);
