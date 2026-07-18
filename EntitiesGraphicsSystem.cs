@@ -51,6 +51,24 @@ namespace Unity.Rendering
             s_Meshes.Register(null);
         }
 
+        public static void GetRenderContext(out Camera camera, out ulong sceneCullingMask, out bool overrideSceneCullingMask)
+        {
+            camera = null;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            camera = UnityEngine.Camera.main; // Explicit camera for the RenderGroup of Unity6 with WX SDK
+#endif
+
+            sceneCullingMask = 0;
+            overrideSceneCullingMask = false;
+#if UNITY_EDITOR
+            if (!SceneViewShowsRuntime)
+            {
+                sceneCullingMask = UnityEditor.SceneManagement.SceneCullingMasks.GameViewObjects;
+                overrideSceneCullingMask = true;
+            }
+#endif
+        }
+
         public int RegisterMaterial(Material material)
         {
             return s_Materials.Register(material);
@@ -72,20 +90,7 @@ namespace Unity.Rendering
         {
             int batchCount = 0;
             int instanceCount = 0;
-            Camera camera = null;
-#if UNITY_WEBGL && !UNITY_EDITOR
-            camera = Camera.main; // Explicit camera for the RenderGroup of Unity6 with WX SDK
-#endif
-
-            ulong sceneCullingMasks = 0;
-            bool overrideSceneCullingMask = false;
-#if UNITY_EDITOR
-            if (!SceneViewShowsRuntime)
-            {
-                sceneCullingMasks = UnityEditor.SceneManagement.SceneCullingMasks.GameViewObjects;
-                overrideSceneCullingMask = true;
-            }
-#endif
+            GetRenderContext(out var camera, out var sceneCullingMask, out var overrideSceneCullingMask);
 
             foreach (var kv in EntitiesGraphicsSystemUnmanaged.s_Queues.Data)
             {
@@ -110,7 +115,7 @@ namespace Unity.Rendering
                         var rp = new RenderParams(material)
                         {
                             camera = camera,
-                            sceneCullingMask = sceneCullingMasks,
+                            sceneCullingMask = sceneCullingMask,
                             overrideSceneCullingMask = overrideSceneCullingMask,
                             matProps = s_MPB
                         };
@@ -127,7 +132,7 @@ namespace Unity.Rendering
                                 var rp = new RenderParams(material)
                                 {
                                     camera = camera,
-                                    sceneCullingMask = sceneCullingMasks,
+                                    sceneCullingMask = sceneCullingMask,
                                     overrideSceneCullingMask = overrideSceneCullingMask,
                                     matProps = s_MPB
                                 };
@@ -139,7 +144,7 @@ namespace Unity.Rendering
                             var rp = new RenderParams(material)
                             {
                                 camera = camera,
-                                sceneCullingMask = sceneCullingMasks,
+                                sceneCullingMask = sceneCullingMask,
                                 overrideSceneCullingMask = overrideSceneCullingMask,
                             };
                             for (int i = 0; i < batch.Count; i++)
