@@ -26,7 +26,7 @@ namespace Graphix
             var ChannelTarget = SystemAPI.GetBufferTypeHandle<ChannelTarget>(false);
             var SkinArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<SkinArray>();
 
-            foreach (var chunk in SystemAPI.QueryBuilder().WithAll<SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
+            foreach (var chunk in SystemAPI.QueryBuilder().WithAll<SkinInfo, JointSource, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
             {
                 var skinArray = chunk.GetSharedComponentManaged(SkinArray, state.EntityManager);
                 NativeArray<SkinInfo> infos = chunk.GetNativeArray(ref SkinInfo);
