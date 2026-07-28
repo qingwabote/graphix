@@ -14,6 +14,7 @@ Shader "Graphix/Toon"
 
         _DissolveMap("Dissolve Map", 2D) = "white" {}
 		_DissolveScale("Dissolve Scale", Float) = 1
+        _Dissolve("Dissolve", Range(0.0, 1.0)) = 0
     }
     SubShader
     {

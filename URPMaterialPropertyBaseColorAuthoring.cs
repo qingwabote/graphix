@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace Unity.Rendering
 {
@@ -13,6 +14,8 @@ namespace Unity.Rendering
     [UnityEngine.DisallowMultipleComponent]
     public class URPMaterialPropertyBaseColorAuthoring : UnityEngine.MonoBehaviour
     {
+        private static readonly int s_BaseColor = Shader.PropertyToID("_BaseColor");
+
         [Unity.Entities.RegisterBinding(typeof(URPMaterialPropertyBaseColor), nameof(URPMaterialPropertyBaseColor.Value))]
         public UnityEngine.Color color;
 
@@ -30,6 +33,15 @@ namespace Unity.Rendering
                 var entity = GetEntity(TransformUsageFlags.Renderable);
                 AddComponent(entity, component);
             }
+        }
+
+        void OnValidate()
+        {
+            var block = new MaterialPropertyBlock();
+            block.SetColor(s_BaseColor, color);
+
+            var renderer = GetComponentInChildren<Renderer>();
+            renderer.SetPropertyBlock(block);
         }
     }
 #endif

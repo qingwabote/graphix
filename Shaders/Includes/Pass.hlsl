@@ -26,6 +26,8 @@ float4 frag (Varyings input) : SV_Target
 {
     UNITY_SETUP_INSTANCE_ID(input);
 
+    float3 normalWS = normalize(input.normalWS);
+
     #if defined(_INSTANCED_BASECOLOR_ON)
         half4 color = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _BaseColor);
     #else
@@ -37,11 +39,11 @@ float4 frag (Varyings input) : SV_Target
 
     Lighting lighting;
     Light light = GetMainLight();
-    lighting.NdotL = saturate(dot(input.normalWS, light.direction));
+    lighting.NdotL = saturate(dot(normalWS, light.direction));
     half3 V = GetWorldSpaceNormalizeViewDir(input.positionWS);
     float3 H = SafeNormalize(float3(light.direction) + float3(V));
-    half NdotH = saturate(dot(input.normalWS, H));
+    half NdotH = saturate(dot(normalWS, H));
     lighting.specular = pow(float(NdotH), float(exp2(10 * _Smoothness + 1))); // Half produces banding, need full precision
 
-    return albedo * half4(CalculateLighting(lighting, light.color, V, input.normalWS), 1.0);
+    return albedo * half4(CalculateLighting(lighting, light.color, V, normalWS), 1.0);
 }
