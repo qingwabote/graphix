@@ -159,10 +159,10 @@ namespace Graphix
             {
                 var group = curveGroups[groupIndex];
                 ref var channel = ref channels[groupIndex];
-                BlobBuilderArray<float> input = builder.Allocate(ref channel.Input, group.KeyCount);
+                BlobBuilderArray<float> input = builder.Allocate(ref channel.Sampler.Times, group.KeyCount);
                 group.GetKeyTimes(ref input);
                 var components = group.Components.Length;
-                BlobBuilderArray<float> output = builder.Allocate(ref channel.Output, group.KeyCount * components);
+                BlobBuilderArray<float> output = builder.Allocate(ref channel.Sampler.Values, group.KeyCount * components);
                 for (int keyIndex = 0; keyIndex < group.KeyCount; keyIndex++)
                 {
                     for (int i = 0; i < components; i++)

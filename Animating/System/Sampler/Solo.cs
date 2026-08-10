@@ -45,13 +45,13 @@ namespace Graphix
                         switch (channel.Path)
                         {
                             case ChannelPath.TRANSLATION:
-                                m_LocalTransformLookup.GetRefRW(target).ValueRW.Position = channel.Vec3(animation.Time);
+                                m_LocalTransformLookup.GetRefRW(target).ValueRW.Position = channel.Sampler.Vec3(animation.Time);
                                 break;
                             case ChannelPath.ROTATION:
-                                m_LocalTransformLookup.GetRefRW(target).ValueRW.Rotation = channel.Quat(animation.Time);
+                                m_LocalTransformLookup.GetRefRW(target).ValueRW.Rotation = channel.Sampler.Quat(animation.Time);
                                 break;
                             case ChannelPath.SCALE:
-                                m_LocalTransformLookup.GetRefRW(target).ValueRW.Scale = channel.Vec3(animation.Time).x;
+                                m_LocalTransformLookup.GetRefRW(target).ValueRW.Scale = channel.Sampler.Vec3(animation.Time).x;
                                 break;
                             default:
                                 throw new Exception($"unsupported path: ${channel.Path}");

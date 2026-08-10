@@ -9,7 +9,7 @@ namespace Graphix
         public override void Bake(MeshRenderer authoring)
         {
             var entity = GetEntity(TransformUsageFlags.Renderable);
-            var meshFilter = authoring.GetComponent<MeshFilter>();
+            var meshFilter = GetComponent<MeshFilter>();
             AddComponentObject(entity, new MaterialMeshBaking
             {
                 Mesh = meshFilter.sharedMesh,
