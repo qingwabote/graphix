@@ -9,8 +9,6 @@ Shader "Graphix/Phong"
         _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
 
         [Toggle] _SKINNING ("Enable Vertex Skinning", Float) = 0
-
-        [Toggle] _INSTANCED_BASECOLOR ("Enable Base Color Instancing", Float) = 0
     }
     SubShader
     {
@@ -23,8 +21,6 @@ Shader "Graphix/Phong"
             #pragma fragment frag
 
             #pragma shader_feature_local _SKINNING_ON
-
-            #pragma shader_feature_local _INSTANCED_BASECOLOR_ON
 
             #pragma multi_compile_instancing
             #pragma instancing_options assumeuniformscaling
@@ -58,16 +54,11 @@ Shader "Graphix/Phong"
             };
 
             CBUFFER_START(UnityPerMaterial)
-            #if !defined(_INSTANCED_BASECOLOR_ON)
-                half4 _BaseColor;
-            #endif
                 half _Smoothness;
             CBUFFER_END
 
             UNITY_INSTANCING_BUFFER_START(PerInstance)
-            #if defined(_INSTANCED_BASECOLOR_ON)
                 UNITY_DEFINE_INSTANCED_PROP(half4, _BaseColor)
-            #endif
             #if defined(_SKINNING_ON)
                 UNITY_DEFINE_INSTANCED_PROP(float, _JointOffset)
             #endif

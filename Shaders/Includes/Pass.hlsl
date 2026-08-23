@@ -28,11 +28,7 @@ float4 frag (Varyings input) : SV_Target
 
     float3 normalWS = normalize(input.normalWS);
 
-    #if defined(_INSTANCED_BASECOLOR_ON)
-        half4 color = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _BaseColor);
-    #else
-        half4 color = _BaseColor;
-    #endif
+    half4 color = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _BaseColor);
     color *= SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
 
     half4 albedo = CalculateSurface(color, input.uv);
