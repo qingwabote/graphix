@@ -57,12 +57,17 @@ Shader "Graphix/Unlit"
             {
                 float2 uv : TEXCOORD0;
                 float4 positionHCS : SV_POSITION;
+
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             CBUFFER_START(UnityPerMaterial)
-                half4 _BaseColor;
                 half _Cutoff;
             CBUFFER_END
+
+            UNITY_INSTANCING_BUFFER_START(PerInstance)
+                UNITY_DEFINE_INSTANCED_PROP(half4, _BaseColor)
+            UNITY_INSTANCING_BUFFER_END(PerInstance)
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -72,6 +77,7 @@ Shader "Graphix/Unlit"
                 UNITY_SETUP_INSTANCE_ID(input);
                 
                 Varyings output = (Varyings)0;
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
                 output.uv = input.texcoord;
                 output.positionHCS = mul(GetWorldToHClipMatrix(), mul(GetObjectToWorldMatrix(), input.positionOS));
                 return output;
@@ -79,7 +85,9 @@ Shader "Graphix/Unlit"
 
             float4 frag (Varyings input) : SV_Target
             {
-                half4 color = _BaseColor;
+                UNITY_SETUP_INSTANCE_ID(input);
+
+                half4 color = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _BaseColor);
                 color *= SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
                 #if defined(_ALPHATEST_ON)
                     clip(color.a - _Cutoff);
