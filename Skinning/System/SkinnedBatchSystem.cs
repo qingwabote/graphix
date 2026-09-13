@@ -14,9 +14,9 @@ namespace Graphix
     {
         private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
 
-        private Batcher m_Batcher;
+        private static readonly Profile.Handle s_Profile = Profile.DefineEntry("SkinBatcher");
 
-        private Profile.Handle m_Profile;
+        private Batcher m_Batcher;
 
         public void OnCreate(ref SystemState state)
         {
@@ -25,12 +25,7 @@ namespace Graphix
 
         unsafe public void OnUpdate(ref SystemState state)
         {
-            if (m_Profile.Entry == 0)
-            {
-                m_Profile = Profile.DefineEntry("SkinBatcher");
-            }
-
-            using (m_Profile.Auto())
+            using (s_Profile.Auto())
             {
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
                 var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);

@@ -88,7 +88,7 @@ namespace Graphix
 
     public partial struct JointUpdater : ISystem
     {
-        private Profile.Handle m_ProfileHandle;
+        private static readonly Profile.Handle s_ProfileHandle = Profile.DefineEntry("JointUpdate");
 
         public void OnCreate(ref SystemState state)
         {
@@ -98,12 +98,7 @@ namespace Graphix
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            if (m_ProfileHandle.Entry == 0)
-            {
-                m_ProfileHandle = Profile.DefineEntry("JointUpdate");
-            }
-
-            using (m_ProfileHandle.Auto())
+            using (s_ProfileHandle.Auto())
             {
                 var models = new NativeList<float4x4>(Allocator.Temp);
                 foreach (var (skin, nodes, source, offset) in SystemAPI.Query<SkinInfo, DynamicBuffer<SkinNode>, RefRW<JointSource>, JointOffset>())

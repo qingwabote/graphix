@@ -9,7 +9,7 @@ namespace Graphix
     [UpdateInGroup(typeof(AnimationSamplerGroup))]
     partial struct Solo : ISystem
     {
-        private Profile.Handle m_ProfileHandle;
+        private static readonly Profile.Handle s_ProfileHandle = Profile.DefineEntry("Solo");
 
         private ComponentLookup<LocalTransform> m_LocalTransformLookup;
 
@@ -23,12 +23,7 @@ namespace Graphix
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            if (m_ProfileHandle.Entry == 0)
-            {
-                m_ProfileHandle = Profile.DefineEntry("Solo");
-            }
-
-            using (m_ProfileHandle.Auto())
+            using (s_ProfileHandle.Auto())
             {
                 m_LocalTransformLookup.Update(ref state);
 

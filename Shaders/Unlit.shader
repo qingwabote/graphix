@@ -7,6 +7,8 @@ Shader "Graphix/Unlit"
 
         _Surface("__surface", Float) = 0.0
 
+        _Cull("__cull", Float) = 2.0
+
         [ToggleUI] _AlphaClip ("__clip", Float) = 0
         _Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
@@ -31,6 +33,7 @@ Shader "Graphix/Unlit"
         Blend [_SrcBlend][_DstBlend], [_SrcBlendAlpha][_DstBlendAlpha]
         ZWrite [_ZWrite]
         ZTest [_ZTest]
+        Cull [_Cull]
 
         Pass
         {

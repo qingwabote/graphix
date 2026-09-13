@@ -11,9 +11,9 @@ namespace Graphix
     [RequireMatchingQueriesForUpdate]
     public partial struct BatchSystem : ISystem
     {
-        private Batcher m_Batcher;
+        private static readonly Profile.Handle s_Profile = Profile.DefineEntry("Batcher");
 
-        private Profile.Handle m_Profile;
+        private Batcher m_Batcher;
 
         public void OnCreate(ref SystemState state)
         {
@@ -23,12 +23,7 @@ namespace Graphix
         // [BurstCompile]
         public unsafe void OnUpdate(ref SystemState state)
         {
-            if (m_Profile.Entry == 0)
-            {
-                m_Profile = Profile.DefineEntry("Batcher");
-            }
-
-            using (m_Profile.Auto())
+            using (s_Profile.Auto())
             {
                 var MaterialMeshInfo = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(true);
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
