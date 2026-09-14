@@ -1,5 +1,6 @@
 using Bastard;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Rendering;
 using Unity.Transforms;
@@ -8,8 +9,9 @@ namespace Graphix
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateInGroup(typeof(BatchGroup))]
+    [CreateAfter(typeof(RenderContextSystem))]
     [RequireMatchingQueriesForUpdate]
-    public partial struct BatchSystem : ISystem
+    public unsafe partial struct BatchSystem : ISystem
     {
         private static readonly Profile.Handle s_Profile = Profile.DefineEntry("Batcher");
 
@@ -17,18 +19,18 @@ namespace Graphix
 
         public void OnCreate(ref SystemState state)
         {
-            m_Batcher = new(Allocator.Persistent);
+            ref var context = ref state.World.Unmanaged.GetUnsafeSystemRef<RenderContextSystem>(state.World.GetExistingSystem<RenderContextSystem>());
+            m_Batcher = new((RenderContextSystem*)UnsafeUtility.AddressOf(ref context), Allocator.Persistent);
         }
 
         // [BurstCompile]
-        public unsafe void OnUpdate(ref SystemState state)
+        public void OnUpdate(ref SystemState state)
         {
             using (s_Profile.Auto())
             {
+
                 var MaterialMeshInfo = SystemAPI.GetComponentTypeHandle<MaterialMeshInfo>(true);
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
-                var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
-                var MaterialMeshArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<MaterialMeshArray>();
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
@@ -37,23 +39,19 @@ namespace Graphix
                 // make MaterialMeshInfo writable for WriteGroup
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAllRW<MaterialMeshInfo>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
-                    var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
-                    ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
-                    using var batcher = scope.AutoChunk(ref queue, ref state, in chunk, ref LocalToWorld);
+                    using var batcher = scope.AutoChunk(in chunk);
 
                     var mms = chunk.GetNativeArray(ref MaterialMeshInfo);
                     for (int entity = 0; entity < chunk.Count; entity++)
                     {
-                        batcher.Add(materialMeshArray, mms[entity], entity);
+                        batcher.Add(mms[entity], entity);
                     }
                 }
 
                 // make MaterialMeshInfoBuffered writable for WriteGroup
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAllRW<MaterialMeshInfoBuffered>().WithOptions(EntityQueryOptions.FilterWriteGroup).Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
-                    var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
-                    ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
-                    using var batcher = scope.AutoChunk(ref queue, ref state, in chunk, ref LocalToWorld);
+                    using var batcher = scope.AutoChunk(in chunk);
 
                     var materialMeshAccessor = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
 
@@ -63,7 +61,7 @@ namespace Graphix
                         var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                         for (int element = 0; element < mmb.Length; element++)
                         {
-                            batcher.Add(materialMeshArray, mmp[element], entity, element);
+                            batcher.Add(mmp[element], entity, element);
                         }
                     }
                 }

@@ -10,6 +10,53 @@ namespace Graphix
 {
     public readonly struct MaterialProperty
     {
+        public struct Cache
+        {
+            public NativeArray<DynamicComponentTypeHandle> Handles;
+            private Bastard.UnsafeHashMap<EntityArchetype, UnsafeList<MaterialProperty>> m_Properties;
+
+            public Cache(EntityManager entityManager)
+            {
+                Handles = new NativeArray<DynamicComponentTypeHandle>(s_PropertyTypes.Count, Allocator.Persistent);
+                for (int i = 0; i < s_PropertyTypes.Count; i++)
+                {
+                    Handles[i] = entityManager.GetDynamicComponentTypeHandle(ComponentType.ReadOnly(s_PropertyTypes[i]));
+                }
+
+                m_Properties = new(8, Allocator.Persistent);
+            }
+
+            public UnsafeList<MaterialProperty>.ReadOnly GetProperty(EntityArchetype archetype)
+            {
+                if (m_Properties.TryGetValue(archetype, out var list))
+                {
+                    return list.AsReadOnly();
+                }
+
+                var types = archetype.GetComponentTypes(Allocator.Temp);
+
+                int count = 0;
+                foreach (var type in types)
+                {
+                    if (s_TypeToProperty.Data.ContainsKey(type.TypeIndex))
+                        count++;
+                }
+                Debug.Assert(count <= Capacity);
+
+                UnsafeList<MaterialProperty> properties = new(count, Allocator.Persistent);
+                foreach (var type in types)
+                {
+                    if (s_TypeToProperty.Data.TryGetValue(type.TypeIndex, out MaterialProperty property))
+                        properties.Add(property);
+                }
+                NativeSortExtension.Sort(properties, new PropertyComparer());
+
+                m_Properties.Add(archetype, properties);
+
+                return properties.AsReadOnly();
+            }
+        }
+
         struct PropertyComparer : IComparer<MaterialProperty>
         {
             public int Compare(MaterialProperty x, MaterialProperty y)
@@ -20,50 +67,15 @@ namespace Graphix
 
         public const int Capacity = 7;
 
-        private struct HandlesTag { }
-        static public readonly SharedStatic<NativeArray<DynamicComponentTypeHandle>> Handles = SharedStatic<NativeArray<DynamicComponentTypeHandle>>.GetOrCreate<HandlesTag>();
-
         private struct TypeToPropertyTag { }
         // use TypeIndex of ComponentType as key, ignore AccessModeType
-        static private readonly SharedStatic<UnsafeHashMap<int, MaterialProperty>> s_TypeToProperty = SharedStatic<UnsafeHashMap<int, MaterialProperty>>.GetOrCreate<TypeToPropertyTag>();
+        static private readonly SharedStatic<Bastard.UnsafeHashMap<int, MaterialProperty>> s_TypeToProperty = SharedStatic<Bastard.UnsafeHashMap<int, MaterialProperty>>.GetOrCreate<TypeToPropertyTag>();
 
-        private struct ArchetypeToPropertyTag { }
-        static private readonly SharedStatic<UnsafeHashMap<EntityArchetype, UnsafeList<MaterialProperty>.ReadOnly>> s_ArchetypeToProperty = SharedStatic<UnsafeHashMap<EntityArchetype, UnsafeList<MaterialProperty>.ReadOnly>>.GetOrCreate<ArchetypeToPropertyTag>();
+        static private List<TypeIndex> s_PropertyTypes = new List<TypeIndex>(8);
 
-        static public UnsafeList<MaterialProperty>.ReadOnly Get(EntityArchetype archetype)
-        {
-            if (s_ArchetypeToProperty.Data.TryGetValue(archetype, out var output))
-            {
-                return output;
-            }
-
-            var types = archetype.GetComponentTypes(Allocator.Temp);
-
-            int count = 0;
-            foreach (var type in types)
-            {
-                if (s_TypeToProperty.Data.ContainsKey(type.TypeIndex))
-                    count++;
-            }
-            Debug.Assert(count <= Capacity);
-
-            UnsafeList<MaterialProperty> properties = new(count, Allocator.Persistent);
-            foreach (var type in types)
-            {
-                if (s_TypeToProperty.Data.TryGetValue(type.TypeIndex, out MaterialProperty property))
-                    properties.Add(property);
-            }
-            NativeSortExtension.Sort(properties, new PropertyComparer());
-
-            s_ArchetypeToProperty.Data.Add(archetype, output = properties.AsReadOnly());
-
-            return output;
-        }
-
-        static public void Initialize(EntityManager entityManager)
+        static MaterialProperty()
         {
             s_TypeToProperty.Data = new(8, Allocator.Persistent);
-            List<DynamicComponentTypeHandle> handles = new();
             foreach (var typeInfo in TypeManager.AllTypes)
             {
                 var type = typeInfo.Type;
@@ -74,15 +86,13 @@ namespace Graphix
                     if (attributes.Length > 0)
                     {
                         var attribute = (MaterialPropertyAttribute)attributes[0];
-                        var property = new MaterialProperty(Shader.PropertyToID(attribute.Name), handles.Count, UnsafeUtility.SizeOf(type), typeInfo.TypeIndex.IsBuffer);
-                        handles.Add(entityManager.GetDynamicComponentTypeHandle(ComponentType.ReadOnly(typeInfo.TypeIndex)));
+                        // MaterialProperty.TypeIndex packs the slot index into the per-world handle array, so the slot and s_PropertyTypes order must stay in lockstep
+                        var property = new MaterialProperty(Shader.PropertyToID(attribute.Name), s_PropertyTypes.Count, UnsafeUtility.SizeOf(type), typeInfo.TypeIndex.IsBuffer);
+                        s_PropertyTypes.Add(typeInfo.TypeIndex);
                         s_TypeToProperty.Data.Add(typeInfo.TypeIndex, property);
                     }
                 }
             }
-            Handles.Data = handles.ToNativeArray(Allocator.Persistent);
-
-            s_ArchetypeToProperty.Data = new(8, Allocator.Persistent);
         }
 
 

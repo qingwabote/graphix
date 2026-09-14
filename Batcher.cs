@@ -11,7 +11,7 @@ using static Unity.Collections.AllocatorManager;
 
 namespace Graphix
 {
-    public struct Batcher
+    public unsafe struct Batcher
     {
         internal struct BatchState
         {
@@ -50,17 +50,15 @@ namespace Graphix
 
         public readonly unsafe ref struct Scope
         {
-            public unsafe ref struct ChunkBatcher
+            public ref struct ChunkBatcher
             {
-                private readonly Bastard.UnsafeHashMap<BatchKey, BatchState>* m_States;
-
-                private readonly UnsafeList<Batch>* m_Queue;
-
-                private readonly UnsafeList<MaterialProperty>.ReadOnly m_Properties;
+                Batcher* m_Batcher;
 
                 private ArchetypeChunk m_Chunk;
 
-                private ComponentTypeHandle<LocalToWorld> m_LocalToWorld;
+                private int m_MaterialMeshArray;
+                private UnsafeList<Batch>* m_Queue;
+                internal UnsafeList<Batch>* Queue => m_Queue;
 
                 private const int ChunkBatchCapacity = 32;
                 private const int ChunkElementCapacity = 128;
@@ -73,21 +71,21 @@ namespace Graphix
                 private fixed int m_ElementToEntity[ChunkElementCapacity];
                 private int m_ElementCount;
 
-                internal ChunkBatcher(Bastard.UnsafeHashMap<BatchKey, BatchState>* states, UnsafeList<Batch>* queue, UnsafeList<MaterialProperty>.ReadOnly properties, in ArchetypeChunk chunk, ref ComponentTypeHandle<LocalToWorld> localToWorld)
+                internal ChunkBatcher(Batcher* batcher, in ArchetypeChunk chunk)
                 {
-                    m_States = states;
-                    m_Queue = queue;
-                    m_Properties = properties;
+                    m_MaterialMeshArray = chunk.GetSharedComponentIndex(batcher->m_Context->MaterialMeshArray);
+                    m_Queue = (UnsafeList<Batch>*)UnsafeUtility.AddressOf(ref batcher->m_Context->GetQueue(m_MaterialMeshArray));
+
+                    m_Batcher = batcher;
                     m_Chunk = chunk;
-                    m_LocalToWorld = localToWorld;
                     m_ElementCount = 0;
                     m_BatchCount = 0;
                 }
 
-                public int Add(int materialMeshArray, MaterialMeshInfo mm, int entity, int element = 0, int hashCode = 0)
+                public int Add(MaterialMeshInfo mm, int entity, int element = 0, int hashCode = 0)
                 {
-                    var key = new BatchKey(mm.Material, mm.Mesh, materialMeshArray, hashCode);
-                    ref var state = ref m_States->EnsureValueRef(key, out var uninitialized);
+                    var key = new BatchKey(mm.Material, mm.Mesh, m_MaterialMeshArray, hashCode);
+                    ref var state = ref m_Batcher->m_States.EnsureValueRef(key, out var uninitialized);
                     if (uninitialized)
                     {
                         state.Index = -1;
@@ -139,9 +137,10 @@ namespace Graphix
 
                 public void Dispose()
                 {
-                    for (int i = 0; i < m_Properties.Length; i++)
+                    var properties = m_Batcher->m_Context->MaterialPropertyCache.GetProperty(m_Chunk.Archetype);
+                    for (int i = 0; i < properties.Length; i++)
                     {
-                        var property = m_Properties.Ptr[i];
+                        var property = properties.Ptr[i];
                         for (int j = 0; j < m_BatchCount; j++)
                         {
                             var batchIndex = m_BatchSet[j];
@@ -149,7 +148,7 @@ namespace Graphix
                             m_BatchToProperty[j] = batch.PropertyDataEnsure(property.Name, property.TypeSize, batch.LocalToWorlds.Capacity);
                         }
 
-                        ref var handle = ref MaterialProperty.Handles.Data.ElementAt(property.TypeIndex);
+                        ref var handle = ref m_Batcher->m_Context->MaterialPropertyCache.Handles.ElementAt(property.TypeIndex);
 
                         if (property.TypeIsBuffer)
                         {
@@ -183,7 +182,7 @@ namespace Graphix
                         }
                     }
 
-                    var localToWorlds = (LocalToWorld*)m_Chunk.GetNativeArray(ref m_LocalToWorld).GetUnsafeReadOnlyPtr();
+                    var localToWorlds = (LocalToWorld*)m_Chunk.GetNativeArray(ref m_Batcher->m_Context->LocalToWorld).GetUnsafeReadOnlyPtr();
                     for (int i = 0; i < m_ElementCount; i++)
                     {
                         ref var batch = ref m_Queue->ElementAt(m_BatchSet[m_ElementToBatch[i]]);
@@ -193,35 +192,22 @@ namespace Graphix
 
             }
 
-            private readonly Bastard.UnsafeHashMap<BatchKey, BatchState>* m_States;
+            private readonly Batcher* m_Batcher;
 
-            internal Scope(ref Bastard.UnsafeHashMap<BatchKey, BatchState> states)
+            internal Scope(Batcher* batcher)
             {
-                m_States = (Bastard.UnsafeHashMap<BatchKey, BatchState>*)UnsafeUtility.AddressOf(ref states);
+                m_Batcher = batcher;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ChunkBatcher AutoChunk(ref UnsafeList<Batch> queue, ref SystemState state, in ArchetypeChunk chunk, ref ComponentTypeHandle<LocalToWorld> localToWorld)
+            public ChunkBatcher AutoChunk(in ArchetypeChunk chunk)
             {
-                var properties = MaterialProperty.Get(chunk.Archetype);
-                for (int i = 0; i < properties.Length; i++)
-                {
-                    ref var handle = ref MaterialProperty.Handles.Data.ElementAt(properties.Ptr[i].TypeIndex);
-                    handle.Update(ref state);
-                }
-
-                return new ChunkBatcher(
-                    m_States,
-                    (UnsafeList<Batch>*)UnsafeUtility.AddressOf(ref queue),
-                    properties,
-                    chunk,
-                    ref localToWorld
-                    );
+                return new ChunkBatcher(m_Batcher, chunk);
             }
 
             public void Dispose()
             {
-                foreach (var kv in *m_States)
+                foreach (var kv in m_Batcher->m_States)
                 {
                     ref var state = ref kv.Value;
                     if (state.Index == -1)
@@ -229,7 +215,7 @@ namespace Graphix
                         continue;
                     }
 
-                    ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(kv.Key.MaterialMeshArray);
+                    ref var queue = ref m_Batcher->m_Context->GetQueue(kv.Key.MaterialMeshArray);
                     ref var batch = ref queue.ElementAt(state.Index);
                     state.Capacity = math.max(batch.Count, state.Capacity);
                     state.Index = -1;
@@ -237,17 +223,19 @@ namespace Graphix
             }
         }
 
+        private RenderContextSystem* m_Context;
         private Bastard.UnsafeHashMap<BatchKey, BatchState> m_States;
 
-        public Batcher(AllocatorHandle allocator)
+        public Batcher(RenderContextSystem* context, AllocatorHandle allocator)
         {
+            m_Context = context;
             m_States = new(128, allocator);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Scope Auto()
         {
-            return new Scope(ref m_States);
+            return new Scope((Batcher*)UnsafeUtility.AddressOf(ref this));
         }
     }
 }

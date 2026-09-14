@@ -1,34 +1,7 @@
 using Bastard;
 using Graphix;
-using Unity.Burst;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using UnityEngine;
-
-namespace Graphix
-{
-    public partial struct EntitiesGraphicsSystemUnmanaged : ISystem
-    {
-        private struct QueuesTag { }
-        internal static readonly SharedStatic<Bastard.UnsafeHashMap<int, UnsafeList<Batch>>> s_Queues = SharedStatic<Bastard.UnsafeHashMap<int, UnsafeList<Batch>>>.GetOrCreate<QueuesTag>();
-
-        public unsafe static ref UnsafeList<Batch> GetQueue(int materialMeshArray)
-        {
-            var queue = s_Queues.Data.EnsureValuePtr(materialMeshArray, out var uninitialized);
-            if (uninitialized)
-            {
-                *queue = new(32, Allocator.Temp);
-            }
-            return ref UnsafeUtility.AsRef<UnsafeList<Batch>>(queue);
-        }
-
-        public void OnUpdate(ref SystemState state)
-        {
-            s_Queues.Data = new(2, Allocator.Temp);
-        }
-    }
-}
 
 namespace Unity.Rendering
 {
@@ -81,8 +54,6 @@ namespace Unity.Rendering
 
         protected override void OnCreate()
         {
-            MaterialProperty.Initialize(EntityManager);
-
             RequireForUpdate<MaterialMeshArray>();
         }
 
@@ -92,7 +63,9 @@ namespace Unity.Rendering
             int instanceCount = 0;
             GetRenderContext(out var camera, out var sceneCullingMask, out var overrideSceneCullingMask);
 
-            foreach (var kv in EntitiesGraphicsSystemUnmanaged.s_Queues.Data)
+            ref var graphics = ref World.Unmanaged.GetUnsafeSystemRef<RenderContextSystem>(World.GetExistingSystem<RenderContextSystem>());
+
+            foreach (var kv in graphics.m_Queues)
             {
                 var materialMeshArray = kv.Key != -1 ? EntityManager.GetSharedComponentManaged<MaterialMeshArray>(kv.Key) : default;
                 ref var queue = ref kv.Value;

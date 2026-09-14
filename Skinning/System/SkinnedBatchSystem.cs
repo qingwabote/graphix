@@ -4,13 +4,15 @@ using Unity.Entities;
 using Unity.Transforms;
 using Unity.Rendering;
 using UnityEngine;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace Graphix
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateInGroup(typeof(BatchGroup))]
+    [CreateAfter(typeof(RenderContextSystem))]
     [RequireMatchingQueriesForUpdate]
-    public partial struct SkinnedBatchSystem : ISystem
+    public unsafe partial struct SkinnedBatchSystem : ISystem
     {
         private static readonly int s_JOINTS = Shader.PropertyToID("_JointMap");
 
@@ -20,17 +22,16 @@ namespace Graphix
 
         public void OnCreate(ref SystemState state)
         {
-            m_Batcher = new(Allocator.Persistent);
+            ref var context = ref state.World.Unmanaged.GetUnsafeSystemRef<RenderContextSystem>(state.World.GetExistingSystem<RenderContextSystem>());
+            m_Batcher = new((RenderContextSystem*)UnsafeUtility.AddressOf(ref context), Allocator.Persistent);
         }
 
-        unsafe public void OnUpdate(ref SystemState state)
+        public void OnUpdate(ref SystemState state)
         {
             using (s_Profile.Auto())
             {
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
-                var LocalToWorld = SystemAPI.GetComponentTypeHandle<LocalToWorld>(true);
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
-                var MaterialMeshArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<MaterialMeshArray>();
                 var SkinArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<SkinArray>();
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
@@ -40,9 +41,8 @@ namespace Graphix
                 foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfoBuffered, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
                     var skinArray = chunk.GetSharedComponentManaged(SkinArray, state.EntityManager);
-                    var materialMeshArray = chunk.GetSharedComponentIndex(MaterialMeshArray);
-                    ref var queue = ref EntitiesGraphicsSystemUnmanaged.GetQueue(materialMeshArray);
-                    using var batcher = scope.AutoChunk(ref queue, ref state, in chunk, ref LocalToWorld);
+                    using var batcher = scope.AutoChunk(in chunk);
+                    var queue = batcher.Queue;
 
                     var materialMeshAccessor = chunk.GetBufferAccessor(ref MaterialMeshInfoBuffered);
 
@@ -55,12 +55,12 @@ namespace Graphix
                         var store = skinArray.GetCurrentStore(skin);
                         for (int i = 0; i < mmb.Length; i++)
                         {
-                            var length = queue.Length;
-                            var batchIndex = batcher.Add(materialMeshArray, mmp[i], entity, i, skin.Skin);
-                            if (queue.Length != length)
+                            var length = queue->Length;
+                            var batchIndex = batcher.Add(mmp[i], entity, i, skin.Skin);
+                            if (queue->Length != length)
                             {
                                 store.Update();
-                                queue.ElementAt(batchIndex).PropertyTextureBind(s_JOINTS, store.Texture);
+                                queue->ElementAt(batchIndex).PropertyTextureBind(s_JOINTS, store.Texture);
                             }
                         }
                     }

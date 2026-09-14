@@ -24,7 +24,7 @@ namespace Graphix
 
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateInGroup(typeof(PresentationSystemGroup)), UpdateBefore(typeof(BatchGroup))]
-    public partial struct EntitiesGraphicsSystemUnmanaged : ISystem { }
+    public partial struct RenderContextSystem : ISystem { }
 
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
     [UpdateInGroup(typeof(PresentationSystemGroup)), UpdateBefore(typeof(EntitiesGraphicsSystem))]
