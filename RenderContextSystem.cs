@@ -33,6 +33,11 @@ namespace Graphix
             MaterialMeshArray = state.GetSharedComponentTypeHandle<MaterialMeshArray>();
         }
 
+        public void OnDestroy(ref SystemState state)
+        {
+            MaterialPropertyCache.Dispose();
+        }
+
         public void OnUpdate(ref SystemState state)
         {
             for (int i = 0; i < MaterialPropertyCache.Handles.Length; i++)

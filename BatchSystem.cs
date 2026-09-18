@@ -23,6 +23,11 @@ namespace Graphix
             m_Batcher = new((RenderContextSystem*)UnsafeUtility.AddressOf(ref context), Allocator.Persistent);
         }
 
+        public void OnDestroy(ref SystemState state)
+        {
+            m_Batcher.Dispose();
+        }
+
         // [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {

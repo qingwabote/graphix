@@ -26,6 +26,24 @@ namespace Graphix
                 m_Properties = new(8, Allocator.Persistent);
             }
 
+            public void Dispose()
+            {
+                if (Handles.IsCreated)
+                {
+                    Handles.Dispose();
+                }
+
+                if (m_Properties.IsCreated)
+                {
+                    foreach (var kv in m_Properties)
+                    {
+                        kv.Value.Dispose();
+                    }
+
+                    m_Properties.Dispose();
+                }
+            }
+
             public UnsafeList<MaterialProperty>.ReadOnly GetProperty(EntityArchetype archetype)
             {
                 if (m_Properties.TryGetValue(archetype, out var list))

@@ -237,5 +237,10 @@ namespace Graphix
         {
             return new Scope((Batcher*)UnsafeUtility.AddressOf(ref this));
         }
+
+        public void Dispose()
+        {
+            m_States.Dispose();
+        }
     }
 }

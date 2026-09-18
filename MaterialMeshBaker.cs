@@ -19,27 +19,35 @@ namespace Graphix
             List<Material> materials = new() { null };
             List<Mesh> meshes = new() { null };
 
+            (int Material, int Mesh) AddMaterialMesh(Material material, Mesh mesh)
+            {
+                int materialIndex = 0;
+                if (material != null && !material2index.TryGetValue(material, out materialIndex))
+                {
+                    materialIndex = materials.Count;
+                    materials.Add(material);
+                    material2index.Add(material, materialIndex);
+                }
+
+                int meshIndex = 0;
+                if (mesh != null && !mesh2index.TryGetValue(mesh, out meshIndex))
+                {
+                    meshIndex = meshes.Count;
+                    meshes.Add(mesh);
+                    mesh2index.Add(mesh, meshIndex);
+                }
+
+                return (materialIndex, meshIndex);
+            }
+
             EntityCommandBuffer ecb = new(Allocator.Temp);
             foreach (var (mm, entity) in SystemAPI.Query<MaterialMeshBaking>().WithNone<MaterialMeshBufferedBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.FilterWriteGroup))
             {
-                if (!material2index.TryGetValue(mm.Material, out var materialIndex))
-                {
-                    materialIndex = materials.Count;
-                    materials.Add(mm.Material);
-                    material2index.Add(mm.Material, materialIndex);
-                }
-
-                if (!mesh2index.TryGetValue(mm.Mesh, out var meshIndex))
-                {
-                    meshIndex = meshes.Count;
-                    meshes.Add(mm.Mesh);
-                    mesh2index.Add(mm.Mesh, meshIndex);
-                }
-
+                var index = AddMaterialMesh(mm.Material, mm.Mesh);
                 ecb.AddComponent(entity, new MaterialMeshInfo
                 {
-                    Material = -materialIndex,
-                    Mesh = -meshIndex
+                    Material = -index.Material,
+                    Mesh = -index.Mesh
                 });
             }
             foreach (var (mmb, entity) in SystemAPI.Query<MaterialMeshBufferedBaking>().WithEntityAccess().WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities))
@@ -48,24 +56,12 @@ namespace Graphix
                 var count = mmb.Materials.Length;
                 for (int i = 0; i < count; i++)
                 {
-                    var material = mmb.Materials[i];
-                    var mesh = mmb.Meshes[i];
-
-                    if (!material2index.TryGetValue(material, out var materialIndex))
+                    var index = AddMaterialMesh(mmb.Materials[i], mmb.Meshes[i]);
+                    buffer.Add(new()
                     {
-                        materialIndex = materials.Count;
-                        materials.Add(material);
-                        material2index.Add(material, materialIndex);
-                    }
-
-                    if (!mesh2index.TryGetValue(mesh, out var meshIndex))
-                    {
-                        meshIndex = meshes.Count;
-                        meshes.Add(mesh);
-                        mesh2index.Add(mesh, meshIndex);
-                    }
-
-                    buffer.Add(new() { Material = -materialIndex, Mesh = -meshIndex });
+                        Material = -index.Material,
+                        Mesh = -index.Mesh
+                    });
                 }
             }
 
