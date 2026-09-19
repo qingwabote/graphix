@@ -11,6 +11,7 @@ namespace Graphix
     {
         public BlobArray<float4x4> InverseBindMatrices;
         public BlobArray<int> Locations;
+        public uint4 Salt;
     }
 
     public class Skin : ScriptableObject, ISerializationCallbackReceiver

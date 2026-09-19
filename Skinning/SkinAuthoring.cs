@@ -17,13 +17,6 @@ namespace Graphix
     }
 
     [BakingType]
-    public class SkinInfoBaking : IComponentData
-    {
-        public Skin Skin;
-        public bool Baking;
-    }
-
-    [BakingType]
     public struct TransformBaking : IBufferElementData
     {
         public LocalTransform Value;
@@ -33,7 +26,6 @@ namespace Graphix
     [WriteGroup(typeof(MaterialMeshInfoBuffered))]
     public struct SkinInfo : IComponentData
     {
-        public int Skin;
         public bool Baking;
         public BlobAssetReference<JointMeta> JointMeta;
     }
@@ -108,10 +100,10 @@ namespace Graphix
                 };
                 tansforms[i] = new TransformBaking { Value = LocalTransform.FromPositionRotationScale(target.localPosition, target.localRotation, target.localScale.x) };
             }
-            AddComponentObject(entity, new SkinInfoBaking
+            AddComponent(entity, new SkinInfo
             {
-                Skin = authoring.Skin,
                 Baking = authoring.Baking,
+                JointMeta = authoring.Skin.JointMeta,
             });
             AddComponent<JointSource>(entity);
             AddComponent<JointOffset>(entity);

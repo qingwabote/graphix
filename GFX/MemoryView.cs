@@ -49,5 +49,10 @@ namespace Graphix
         protected abstract void Reserve(int capacity);
 
         protected abstract void Upload();
+
+        public void Dispose()
+        {
+            m_Source.Dispose();
+        }
     }
 }

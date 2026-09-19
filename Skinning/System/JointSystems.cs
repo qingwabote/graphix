@@ -8,27 +8,24 @@ using Unity.Transforms;
 
 namespace Graphix
 {
+    [RequireMatchingQueriesForUpdate]
     public partial struct JointAllocator : ISystem
     {
-        public void OnCreate(ref SystemState state)
-        {
-            state.RequireForUpdate<SkinInfo>();
-            state.RequireForUpdate<SkinArray>();
-        }
+        private static readonly Profile.Handle s_Profile = Profile.DefineEntry("JointAlloc");
 
         public void OnUpdate(ref SystemState state)
         {
+            using var scope = s_Profile.Auto();
+
             var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
             var AnimationState = SystemAPI.GetComponentTypeHandle<AnimationState>(true);
             var ClipBinging = SystemAPI.GetBufferTypeHandle<ClipBinging>(true);
             var JointSource = SystemAPI.GetComponentTypeHandle<JointSource>(false);
             var JointOffset = SystemAPI.GetComponentTypeHandle<JointOffset>(false);
             var ChannelTarget = SystemAPI.GetBufferTypeHandle<ChannelTarget>(false);
-            var SkinArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<SkinArray>();
 
-            foreach (var chunk in SystemAPI.QueryBuilder().WithAll<SkinInfo, JointSource, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
+            foreach (var chunk in SystemAPI.QueryBuilder().WithAll<SkinInfo, JointSource>().Build().ToArchetypeChunkArray(Allocator.Temp))
             {
-                var skinArray = chunk.GetSharedComponentManaged(SkinArray, state.EntityManager);
                 NativeArray<SkinInfo> infos = chunk.GetNativeArray(ref SkinInfo);
                 NativeArray<JointSource> sources = chunk.GetNativeArray(ref JointSource);
                 NativeArray<JointOffset> offsets = chunk.GetNativeArray(ref JointOffset);
@@ -45,26 +42,29 @@ namespace Graphix
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     var info = infos[i];
+                    var pose = PoseCache.Get(info.JointMeta);
 
                     int offset = -1;
-                    bool baked = false;
-                    BlobAssetReference<Clip> clip = default;
-                    int frame = -1;
+                    ulong clipHash = 0;
+                    int frameIndex = 0;
+                    int frameCount = 1;
                     if (info.Baking)
                     {
                         if (animated)
                         {
                             var anim = animations[i];
-                            clip = clips[i][anim.Index].Blob;
-                            var duration = clip.Value.Duration;
-                            var ratio = anim.Time / duration;
-                            frame = (int)math.ceil(ratio * (duration * 60 - 1));
+                            var clip = clips[i][anim.Index].Blob;
+                            frameCount = (int)(clip.Value.Duration * 60);
+                            frameIndex = math.min((int)(anim.Time * 60), frameCount - 1);
+                            clipHash = clip.GetDataHash();
                         }
-                        baked = skinArray.GetOffset(info, clip, frame, out offset);
+
+                        offset = pose.GetOffset(clipHash, frameIndex);
                     }
-                    if (!baked)
+
+                    if (offset == -1)
                     {
-                        var store = skinArray.GetCurrentStore(info);
+                        var store = pose.GetStore(info.Baking);
                         offset = store.Add();
                         unsafe
                         {
@@ -73,27 +73,28 @@ namespace Graphix
 
                         if (info.Baking)
                         {
-                            skinArray.SetOffset(info, clip, frame, offset);
+                            pose.SetOffset(clipHash, frameIndex, frameCount, offset);
                         }
                     }
+
                     offsets[i] = new JointOffset { Value = offset };
+
                     if (animated)
                     {
-                        channelTargets[i] = !baked;
+                        unsafe
+                        {
+                            channelTargets[i] = sources[i].Value != null;
+                        }
                     }
                 }
             }
         }
     }
 
+    [RequireMatchingQueriesForUpdate]
     public partial struct JointUpdater : ISystem
     {
         private static readonly Profile.Handle s_ProfileHandle = Profile.DefineEntry("JointUpdate");
-
-        public void OnCreate(ref SystemState state)
-        {
-            state.RequireForUpdate<JointSource>();
-        }
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)

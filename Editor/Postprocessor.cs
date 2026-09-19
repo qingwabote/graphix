@@ -183,6 +183,11 @@ namespace Graphix
             context.AddObjectToAsset($"Graphix_{animationClip.name}", animationClip);
         }
 
+        public override uint GetVersion()
+        {
+            return 3;
+        }
+
         void OnPostprocessModel(GameObject go)
         {
             var skinnedRenderers = go.GetComponentsInChildren<SkinnedMeshRenderer>();
@@ -253,6 +258,7 @@ namespace Graphix
                 {
                     Locations[i] = nodes[i].Location;
                 }
+                meta.Salt = ((Unity.Entities.Hash128)AssetDatabase.GUIDFromAssetPath(assetPath)).Value;
                 skin.JointMeta = builder.CreateBlobAssetReference<JointMeta>(Allocator.Persistent);
 
 

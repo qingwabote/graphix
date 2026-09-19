@@ -37,15 +37,13 @@ namespace Graphix
             {
                 var MaterialMeshInfoBuffered = SystemAPI.GetBufferTypeHandle<MaterialMeshInfoBuffered>(true);
                 var SkinInfo = SystemAPI.GetComponentTypeHandle<SkinInfo>(true);
-                var SkinArray = SystemAPI.ManagedAPI.GetSharedComponentTypeHandle<SkinArray>();
 
                 state.EntityManager.CompleteDependencyBeforeRO<LocalToWorld>();
 
                 using var scope = m_Batcher.Auto();
 
-                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfoBuffered, SkinInfo, SkinArray>().Build().ToArchetypeChunkArray(Allocator.Temp))
+                foreach (var chunk in SystemAPI.QueryBuilder().WithAll<MaterialMeshInfoBuffered, SkinInfo>().Build().ToArchetypeChunkArray(Allocator.Temp))
                 {
-                    var skinArray = chunk.GetSharedComponentManaged(SkinArray, state.EntityManager);
                     using var batcher = scope.AutoChunk(in chunk);
                     var queue = batcher.Queue;
 
@@ -57,13 +55,14 @@ namespace Graphix
                         var mmb = materialMeshAccessor[entity];
                         var mmp = (MaterialMeshInfo*)mmb.GetUnsafeReadOnlyPtr();
                         var skin = SkinInfos[entity];
-                        var store = skinArray.GetCurrentStore(skin);
+                        var jointMetaHash = skin.JointMeta.GetDataHash();
                         for (int i = 0; i < mmb.Length; i++)
                         {
                             var length = queue->Length;
-                            var batchIndex = batcher.Add(mmp[i], entity, i, skin.Skin);
+                            var batchIndex = batcher.Add(mmp[i], entity, i, (int)jointMetaHash);
                             if (queue->Length != length)
                             {
+                                var store = PoseCache.Get(skin.JointMeta).GetStore(skin.Baking);
                                 store.Update();
                                 queue->ElementAt(batchIndex).PropertyTextureBind(s_JOINTS, store.Texture);
                             }
