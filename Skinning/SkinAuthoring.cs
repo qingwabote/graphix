@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Bastard;
 using Unity.Collections;
 using Unity.Entities;
@@ -109,19 +108,17 @@ namespace Graphix
             AddComponent<JointOffset>(entity);
 
             // "The transform of the node that the skin is attached to is ignored", we use a single entity to hold all MaterialMeshes. https://github.khronos.org/glTF-Tutorials/gltfTutorial/gltfTutorial_020_Skins.html
-            var materails = new List<Material>();
-            var meshes = new List<Mesh>();
             var renderers = GetComponentsInChildren<SkinnedMeshRenderer>();
-            foreach (var renderer in renderers)
+            var buffer = AddBuffer<MaterialMeshInfoBuffered>(entity);
+            buffer.ResizeUninitialized(renderers.Length);
+            for (int i = 0; i < renderers.Length; i++)
             {
-                materails.Add(renderer.sharedMaterial);
-                meshes.Add(renderer.sharedMesh);
+                buffer[i] = new MaterialMeshInfoBuffered
+                {
+                    Material = renderers[i].sharedMaterial,
+                    Mesh = renderers[i].sharedMesh
+                };
             }
-            AddComponentObject(entity, new MaterialMeshBufferedBaking
-            {
-                Materials = materails.ToArray(),
-                Meshes = meshes.ToArray()
-            });
         }
     }
 #endif

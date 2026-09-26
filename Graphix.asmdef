@@ -9,7 +9,8 @@
         "Unity.Collections",
         "Unity.Mathematics",
         "Bastard",
-        "Bastard.Editor"
+        "Bastard.Editor",
+        "Bag"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

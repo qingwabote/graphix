@@ -1,5 +1,5 @@
+using Bag;
 using Unity.Entities;
-using Unity.Rendering;
 using Unity.Transforms;
 
 namespace Graphix
@@ -21,19 +21,12 @@ namespace Graphix
 
     [UpdateAfter(typeof(TransformSystemGroup))]
     public partial struct Freezer : ISystem { }
-
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateInGroup(typeof(PresentationSystemGroup)), UpdateBefore(typeof(BatchGroup))]
-    public partial struct RenderContextSystem : ISystem { }
-
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateInGroup(typeof(PresentationSystemGroup)), UpdateBefore(typeof(EntitiesGraphicsSystem))]
-    public partial class BatchGroup : ComponentSystemGroup { }
 }
 
 namespace Unity.Rendering
 {
     [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
-    [UpdateInGroup(typeof(PresentationSystemGroup))]
+    [CreateAfter(typeof(BatchGroup))]
+    [UpdateInGroup(typeof(PresentationSystemGroup)), UpdateAfter(typeof(BatchGroup))]
     public partial class EntitiesGraphicsSystem : SystemBase { }
 }

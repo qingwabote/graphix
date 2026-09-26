@@ -1,5 +1,4 @@
-using Bastard;
-using Graphix;
+using Bag;
 using Unity.Entities;
 using UnityEngine;
 
@@ -11,17 +10,19 @@ namespace Unity.Rendering
         public static bool SceneViewShowsRuntime;
 #endif
 
-        private static readonly Registry<Material> s_Materials;
-        private static readonly Registry<Mesh> s_Meshes;
-
         private static readonly MaterialPropertyBlock s_MPB = new();
 
-        static EntitiesGraphicsSystem()
+        private BatchQueue m_Queue;
+        public BatchQueue Queue => m_Queue;
+
+        protected override void OnCreate()
         {
-            s_Materials = new();
-            s_Materials.Register(null);
-            s_Meshes = new();
-            s_Meshes.Register(null);
+            m_Queue = World.GetExistingSystemManaged<BatchGroup>().CreateQueue();
+        }
+
+        protected override void OnDestroy()
+        {
+            m_Queue.Dispose();
         }
 
         public static void GetRenderContext(out Camera camera, out ulong sceneCullingMask, out bool overrideSceneCullingMask)
@@ -42,19 +43,14 @@ namespace Unity.Rendering
 #endif
         }
 
-        public int RegisterMaterial(Material material)
+        public UnityObjectRef<Material> RegisterMaterial(Material material)
         {
-            return s_Materials.Register(material);
+            return material;
         }
 
-        public int RegisterMesh(Mesh mesh)
+        public UnityObjectRef<Mesh> RegisterMesh(Mesh mesh)
         {
-            return s_Meshes.Register(mesh);
-        }
-
-        protected override void OnCreate()
-        {
-            RequireForUpdate<MaterialMeshArray>();
+            return mesh;
         }
 
         protected override void OnUpdate()
@@ -63,72 +59,68 @@ namespace Unity.Rendering
             int instanceCount = 0;
             GetRenderContext(out var camera, out var sceneCullingMask, out var overrideSceneCullingMask);
 
-            ref var graphics = ref World.Unmanaged.GetUnsafeSystemRef<RenderContextSystem>(World.GetExistingSystem<RenderContextSystem>());
+            using var batches = m_Queue.Dump();
 
-            foreach (var kv in graphics.m_Queues)
+            batchCount += batches.Length;
+
+            for (int index = 0; index < batches.Length; index++)
             {
-                var materialMeshArray = kv.Key != -1 ? EntityManager.GetSharedComponentManaged<MaterialMeshArray>(kv.Key) : default;
-                ref var queue = ref kv.Value;
+                ref readonly var batch = ref batches.ElementAt(index);
 
-                batchCount += queue.Length;
-
-                foreach (var batch in queue)
+                var material = (Material)batch.Material;
+                var mesh = (Mesh)batch.Mesh;
+                if (material == null || mesh == null)
                 {
-                    var material = batch.Material < 0 ? materialMeshArray.Materials[-batch.Material] : s_Materials.Get(batch.Material);
-                    var mesh = batch.Mesh < 0 ? materialMeshArray.Meshes[-batch.Mesh] : s_Meshes.Get(batch.Mesh);
-                    if (material == null || mesh == null)
-                    {
-                        continue;
-                    }
+                    continue;
+                }
 
-                    if (material.enableInstancing)
+                if (material.enableInstancing)
+                {
+                    s_MPB.Clear();
+                    batch.PropertyToBlock(s_MPB);
+                    var rp = new RenderParams(material)
                     {
-                        s_MPB.Clear();
-                        batch.PropertyToBlock(s_MPB);
-                        var rp = new RenderParams(material)
-                        {
-                            camera = camera,
-                            sceneCullingMask = sceneCullingMask,
-                            overrideSceneCullingMask = overrideSceneCullingMask,
-                            matProps = s_MPB
-                        };
-                        Graphics.RenderMeshInstanced(rp, mesh, 0, batch.LocalToWorlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
-                    }
-                    else
+                        camera = camera,
+                        sceneCullingMask = sceneCullingMask,
+                        overrideSceneCullingMask = overrideSceneCullingMask,
+                        matProps = s_MPB
+                    };
+                    Graphics.RenderMeshInstanced(rp, mesh, 0, batch.LocalToWorlds.AsArray().Reinterpret<Matrix4x4>(), batch.Count);
+                }
+                else
+                {
+                    if (batch.PropertyAcquired)
                     {
-                        if (batch.PropertyAcquired)
+                        for (int i = 0; i < batch.Count; i++)
                         {
-                            for (int i = 0; i < batch.Count; i++)
-                            {
-                                s_MPB.Clear();
-                                batch.PropertyToBlock(i, s_MPB);
-                                var rp = new RenderParams(material)
-                                {
-                                    camera = camera,
-                                    sceneCullingMask = sceneCullingMask,
-                                    overrideSceneCullingMask = overrideSceneCullingMask,
-                                    matProps = s_MPB
-                                };
-                                Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
-                            }
-                        }
-                        else
-                        {
+                            s_MPB.Clear();
+                            batch.PropertyToBlock(i, s_MPB);
                             var rp = new RenderParams(material)
                             {
                                 camera = camera,
                                 sceneCullingMask = sceneCullingMask,
                                 overrideSceneCullingMask = overrideSceneCullingMask,
+                                matProps = s_MPB
                             };
-                            for (int i = 0; i < batch.Count; i++)
-                            {
-                                Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
-                            }
+                            Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
                         }
-
                     }
-                    instanceCount += batch.Count;
+                    else
+                    {
+                        var rp = new RenderParams(material)
+                        {
+                            camera = camera,
+                            sceneCullingMask = sceneCullingMask,
+                            overrideSceneCullingMask = overrideSceneCullingMask,
+                        };
+                        for (int i = 0; i < batch.Count; i++)
+                        {
+                            Graphics.RenderMesh(rp, mesh, 0, batch.LocalToWorlds.ElementAt(i));
+                        }
+                    }
+
                 }
+                instanceCount += batch.Count;
             }
         }
     }

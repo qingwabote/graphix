@@ -1,40 +1,32 @@
-using System;
 using Unity.Entities;
+using UnityEngine;
 
 namespace Unity.Rendering
 {
-    public struct MaterialMeshInfo : IComponentData, IEquatable<MaterialMeshInfo>
+    public struct MaterialMeshInfo : IComponentData
     {
-        /* negative for static and positive for dynamic */
-        public int Material;
-        public int Mesh;
+        public UnityObjectRef<Material> Material;
+        public UnityObjectRef<Mesh> Mesh;
 
-        public int MaterialID
+        public UnityObjectRef<Material> MaterialID
         {
             get => Material;
             set => Material = value;
         }
 
-        public int MeshID
+        public UnityObjectRef<Mesh> MeshID
         {
             get => Mesh;
             set => Mesh = value;
         }
-
-        public override int GetHashCode()
-        {
-            return Bastard.HashCode.Combine(Material, Mesh);
-        }
-
-        public bool Equals(MaterialMeshInfo other)
-        {
-            return Material == other.Material && Mesh == other.Mesh;
-        }
     }
+}
 
+namespace Graphix
+{
     public struct MaterialMeshInfoBuffered : IBufferElementData
     {
-        public int Material;
-        public int Mesh;
+        public UnityObjectRef<Material> Material;
+        public UnityObjectRef<Mesh> Mesh;
     }
 }

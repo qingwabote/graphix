@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Rendering;
 using UnityEngine;
 
 namespace Graphix
@@ -12,7 +13,7 @@ namespace Graphix
             if (meshFilter == null) { return; }
 
             var entity = GetEntity(TransformUsageFlags.Renderable);
-            AddComponentObject(entity, new MaterialMeshBaking
+            AddComponent(entity, new MaterialMeshInfo
             {
                 Mesh = meshFilter.sharedMesh,
                 Material = authoring.sharedMaterial
@@ -21,4 +22,3 @@ namespace Graphix
     }
 #endif
 }
-
